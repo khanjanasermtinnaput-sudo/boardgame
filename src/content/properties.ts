@@ -1,0 +1,66 @@
+import type { PropertyTemplate } from '@/engine/types'
+
+export const PROPERTIES: PropertyTemplate[] = [
+  {
+    id: 'house',
+    name: 'House',
+    category: 'Residential',
+    purchasePrice: 50000,
+    baseRentalIncome: 600,
+    maintenance: 120,
+    appreciationRate: 0.02,
+    description: 'A single-family home in a quiet suburb.',
+  },
+  {
+    id: 'condo',
+    name: 'Condo',
+    category: 'Residential',
+    purchasePrice: 35000,
+    baseRentalIncome: 450,
+    maintenance: 90,
+    appreciationRate: 0.018,
+    description: 'A low-maintenance condo unit near downtown.',
+  },
+  {
+    id: 'apartment',
+    name: 'Apartment Building',
+    category: 'Residential',
+    purchasePrice: 90000,
+    baseRentalIncome: 1400,
+    maintenance: 300,
+    appreciationRate: 0.022,
+    description: 'A multi-unit apartment building with steady occupancy.',
+  },
+  {
+    id: 'office',
+    name: 'Office',
+    category: 'Commercial',
+    purchasePrice: 150000,
+    baseRentalIncome: 2200,
+    maintenance: 500,
+    appreciationRate: 0.015,
+    description: 'A leased office floor in the business district.',
+  },
+  {
+    id: 'commercial-building',
+    name: 'Commercial Building',
+    category: 'Commercial',
+    purchasePrice: 220000,
+    baseRentalIncome: 3400,
+    maintenance: 800,
+    appreciationRate: 0.017,
+    description: 'A mixed-use commercial building with multiple tenants.',
+  },
+  {
+    id: 'land',
+    name: 'Land',
+    category: 'Land',
+    purchasePrice: 30000,
+    baseRentalIncome: 0,
+    maintenance: 20,
+    appreciationRate: 0.03,
+    description: 'Undeveloped land held for long-term appreciation.',
+  },
+]
+
+export const PROPERTIES_BY_ID = new Map(PROPERTIES.map((p) => [p.id, p]))

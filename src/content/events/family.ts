@@ -1,0 +1,26 @@
+import type { EventCard } from '@/engine/types'
+
+export const FAMILY_EVENTS: EventCard[] = [
+  { id: 'family-001', category: 'family', title: 'New Family Member', flavor: 'Your family grows, and so does your monthly budget.', effects: [{ kind: 'expense_delta', amount: 150 }] },
+  { id: 'family-002', category: 'family', title: 'Wedding Gift', flavor: 'A relative gets married and you happily chip in for the gift.', effects: [{ kind: 'cash_delta', amount: -200 }] },
+  { id: 'family-003', category: 'family', title: 'Family Reunion', flavor: 'You host a big family reunion — wonderful, but not cheap.', effects: [{ kind: 'cash_delta', amount: -350 }] },
+  { id: 'family-004', category: 'family', title: 'Generous Gift', flavor: 'A family member surprises you with a generous gift.', effects: [{ kind: 'cash_delta', amount: 600 }] },
+  { id: 'family-005', category: 'family', title: 'Sibling Loan Repaid', flavor: 'A sibling finally pays back that loan from years ago.', effects: [{ kind: 'cash_delta', amount: 400 }] },
+  { id: 'family-006', category: 'family', title: 'College Fund Contribution', flavor: 'You set aside extra savings for a family member’s education.', effects: [{ kind: 'cash_delta', amount: -500 }] },
+  { id: 'family-007', category: 'family', title: 'Family Business Help', flavor: 'You lend a hand to a relative’s business and get paid for it.', effects: [{ kind: 'cash_delta', amount: 350 }] },
+  { id: 'family-008', category: 'family', title: 'Anniversary Celebration', flavor: 'A milestone anniversary calls for a proper celebration.', effects: [{ kind: 'cash_delta', amount: -250 }] },
+  { id: 'family-009', category: 'family', title: 'Hand-Me-Down Savings', flavor: 'A relative hands down furniture and gear, saving you a bundle.', effects: [{ kind: 'cash_delta', amount: 220 }] },
+  { id: 'family-010', category: 'family', title: 'Custody Arrangement Costs', flavor: 'Updated family arrangements bring a modest new monthly cost.', effects: [{ kind: 'expense_delta', amount: 90 }] },
+  { id: 'family-011', category: 'family', title: 'Family Vacation', flavor: 'You treat the family to a well-deserved getaway.', effects: [{ kind: 'cash_delta', amount: -700 }] },
+  { id: 'family-012', category: 'family', title: 'Relative Moves In', flavor: 'A relative moves in temporarily, splitting some household costs.', effects: [{ kind: 'expense_delta', amount: -70 }] },
+  { id: 'family-013', category: 'family', title: 'Family Loan Requested', flavor: 'A relative asks to borrow money — you help out.', effects: [{ kind: 'cash_delta', amount: -400 }] },
+  { id: 'family-014', category: 'family', title: 'Milestone Bonus', flavor: 'Your family pitches in to help you hit a savings milestone.', effects: [{ kind: 'cash_delta', amount: 500 }] },
+  { id: 'family-015', category: 'family', title: 'Childcare Costs Rise', flavor: 'Childcare rates go up at the start of the new term.', effects: [{ kind: 'expense_delta', amount: 110 }] },
+  { id: 'family-016', category: 'family', title: 'Family Recipe Business', flavor: 'A family recipe turned side hustle starts bringing in cash.', effects: [{ kind: 'income_delta', amount: 100 }] },
+  { id: 'family-017', category: 'family', title: 'Surprise Visit', flavor: 'Relatives visit for a week — a joy, and a grocery bill spike.', effects: [{ kind: 'cash_delta', amount: -180 }] },
+  { id: 'family-018', category: 'family', title: 'Shared Inheritance', flavor: 'A family estate is divided and your share arrives.', effects: [{ kind: 'cash_percent_of_net_worth', percent: 0.06 }] },
+  { id: 'family-019', category: 'family', title: 'Family Feud Costs', flavor: 'A disagreement over shared property costs you in mediation fees.', effects: [{ kind: 'cash_delta', amount: -300 }] },
+  { id: 'family-020', category: 'family', title: 'Proud Parent Bonus', flavor: 'You treat yourself after a family member’s big achievement.', effects: [{ kind: 'cash_delta', amount: -150 }] },
+  { id: 'family-021', category: 'family', title: 'Multigenerational Savings', flavor: 'Pooling resources with family cuts your shared costs.', effects: [{ kind: 'expense_delta', amount: -85 }] },
+  { id: 'family-022', category: 'family', title: 'Family Emergency Fund', flavor: 'You contribute to — and later draw a little back from — a shared family fund.', effects: [{ kind: 'cash_delta', amount: 200 }] },
+]
