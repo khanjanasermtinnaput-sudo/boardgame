@@ -28,6 +28,9 @@ export async function ensureAnonymousSession(): Promise<string> {
 
   const { data: signInData, error } = await supabase.auth.signInAnonymously()
   if (error || !signInData.session) {
+    if (error?.message?.toLowerCase().includes('anonymous sign-ins are disabled')) {
+      throw new Error('anonymous_disabled')
+    }
     throw new Error(error?.message ?? 'anonymous_sign_in_failed')
   }
   return signInData.session.user.id

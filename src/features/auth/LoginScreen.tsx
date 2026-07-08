@@ -23,6 +23,8 @@ function friendlyError(message: string): string {
       return 'That username was just taken — try again.'
     case 'not_authenticated':
       return 'Session expired. Please refresh and try again.'
+    case 'anonymous_disabled':
+      return 'Sign-in is unavailable right now — anonymous auth is disabled on the server. Contact the site admin.'
     default:
       return 'Something went wrong. Please try again.'
   }
