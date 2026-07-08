@@ -145,4 +145,35 @@ describe('bankruptcy and win detection via END_TURN', () => {
     expect(result.value.phase).toBe('ended')
     expect(result.value.winnerId).toBe('p2')
   })
+
+  it('ends the game (does not soft-lock) when the last active player goes bankrupt on their own turn', () => {
+    // 3-player survival game where two players are already bankrupt and the
+    // third (current) player busts on END_TURN — zero active players remain.
+    const state = createInitialGameState(
+      [
+        { id: 'p1', name: 'Alice', tokenColor: 'emerald', seat: 0 },
+        { id: 'p2', name: 'Bob', tokenColor: 'gold', seat: 1 },
+        { id: 'p3', name: 'Cara', tokenColor: 'sky', seat: 2 },
+      ],
+      { type: 'survival' },
+    )
+
+    const allButOneBroke = {
+      ...state,
+      phase: 'action' as const,
+      lastRoll: [1, 2] as [number, number],
+      turnIndex: 0,
+      players: state.players.map((p) => {
+        if (p.id === 'p1') return { ...p, cash: -5000 }
+        return { ...p, bankrupt: true }
+      }),
+    }
+
+    const result = applyGameAction(allButOneBroke, 'p1', { type: 'END_TURN' })
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+
+    // The game must end rather than looping turns forever on an all-bankrupt table.
+    expect(result.value.phase).toBe('ended')
+  })
 })

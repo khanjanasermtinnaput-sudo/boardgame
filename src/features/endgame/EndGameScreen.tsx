@@ -34,8 +34,10 @@ export function EndGameScreen({ state, roomId, selfProfileId }: EndGameScreenPro
     const self = ranking.find((r) => r.playerId === selfProfileId)
     if (!self) return
 
-    const won = state.winnerId === selfProfileId
-    submitGameResult(roomId, self.netWorth, won)
+    // net worth + win/loss are read server-side from the host-computed
+    // final_results the host wrote via finish_game — this call no longer
+    // sends a self-reported claim (see submitGameResult in lib/game.ts).
+    submitGameResult(roomId)
       .then(() => {
         sessionStorage.setItem(submittedKey, '1')
         setSubmitted(true)
@@ -53,7 +55,13 @@ export function EndGameScreen({ state, roomId, selfProfileId }: EndGameScreenPro
       <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} className="text-center">
         <h1 className="font-display text-3xl font-bold text-surface-50">Game Over</h1>
         <p className="mt-1 text-surface-400">
-          {ranking[0]?.name ?? 'A player'} finishes with the highest net worth.
+          {state.tiedPlayerIds && state.tiedPlayerIds.length > 1
+            ? `It's a tie between ${state.tiedPlayerIds
+                .map((id) => ranking.find((r) => r.playerId === id)?.name ?? 'a player')
+                .join(' and ')}.`
+            : state.winnerId
+              ? `${ranking.find((r) => r.playerId === state.winnerId)?.name ?? 'A player'} wins!`
+              : 'No one survived — the game ends with no winner.'}
         </p>
       </motion.div>
 

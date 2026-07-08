@@ -14,7 +14,7 @@ import { takeLoan, repayLoan } from './loans'
 import { buyInsurance, cancelInsurance, mitigateLoss } from './insurance'
 import { EDUCATION_COST, EDUCATION_SALARY_BOOST } from './education'
 import { totalPassiveIncome, totalExpenses, netWorth } from './economy'
-import { evaluateWinner } from './winConditions'
+import { evaluateOutcome } from './winConditions'
 
 const BONUS_SPACE_AMOUNT = 400
 const CHARITY_DONATION_RATE = 0.01
@@ -348,9 +348,20 @@ function handleEndTurn(state: GameState): ActionResult<GameState> {
     pendingAuction: undefined,
   }
 
-  const winnerId = evaluateWinner(nextState)
-  if (winnerId) {
-    nextState = { ...nextState, phase: 'ended', winnerId, log: appendLog(nextState, `${playerName(nextState, winnerId)} wins the game!`) }
+  const outcome = evaluateOutcome(nextState)
+  if (outcome.ended) {
+    const message = outcome.winnerId
+      ? `${playerName(nextState, outcome.winnerId)} wins the game!`
+      : outcome.tiedPlayerIds && outcome.tiedPlayerIds.length > 0
+        ? `The game ends in a tie between ${outcome.tiedPlayerIds.map((id) => playerName(nextState, id)).join(' and ')}.`
+        : `The game ends with no winner — everyone is out.`
+    nextState = {
+      ...nextState,
+      phase: 'ended',
+      winnerId: outcome.winnerId,
+      tiedPlayerIds: outcome.tiedPlayerIds,
+      log: appendLog(nextState, message),
+    }
   }
 
   return { ok: true, value: nextState }

@@ -1,13 +1,15 @@
 import { useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
-import { fetchUnprocessedActions, type GameActionRow } from '@/lib/game'
+import { fetchUnprocessedActions, markActionProcessed, type GameActionRow } from '@/lib/game'
 import { processQueuedAction } from '@/net/hostLoop'
-import type { GameAction } from '@/engine/actions'
+import { isGameAction } from '@/engine/actions'
 
 export function useHostGameLoop(roomId: string | undefined, gameId: string | null, isHost: boolean): void {
   // Guards against the same game_actions row being picked up twice — once by
   // the initial backlog fetch and once by the realtime subscription, since
   // both run concurrently and could otherwise both observe the same insert.
+  // Entries are removed once processing settles (see enqueue below) so this
+  // stays bounded to in-flight rows instead of growing for the whole session.
   const seenRowIds = useRef(new Set<string>())
 
   useEffect(() => {
@@ -17,10 +19,21 @@ export function useHostGameLoop(roomId: string | undefined, gameId: string | nul
       if (seenRowIds.current.has(row.id)) return
       seenRowIds.current.add(row.id)
 
-      const action = row.payload as unknown as GameAction
-      processQueuedAction(roomId!, row.id, row.profile_id, action).catch((err) => {
-        console.error('host loop failed to process action', row.id, err)
-      })
+      // RLS only checks who inserted the row, not that its payload matches
+      // the shape its `type` claims — validate before it ever reaches the
+      // reducer. A malformed row is marked processed (dropped) rather than
+      // retried forever.
+      if (!isGameAction(row.payload)) {
+        console.error('host loop dropped malformed game_actions row', row.id, row.payload)
+        markActionProcessed(row.id)
+          .catch((err) => console.error('failed to mark malformed action processed', row.id, err))
+          .finally(() => seenRowIds.current.delete(row.id))
+        return
+      }
+
+      processQueuedAction(roomId!, row.id, row.profile_id, row.payload)
+        .catch((err) => console.error('host loop failed to process action', row.id, err))
+        .finally(() => seenRowIds.current.delete(row.id))
     }
 
     let cancelled = false

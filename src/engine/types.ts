@@ -216,4 +216,5 @@ export interface GameState {
   pendingEventCardId?: string
   pendingAuction?: AuctionOffer
   winnerId?: string
+  tiedPlayerIds?: string[]
 }

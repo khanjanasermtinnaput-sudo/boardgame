@@ -4,12 +4,18 @@ import type { ActionResult, GameState } from '@/engine/types'
 import { appendGameLog, finishGame, markActionProcessed, syncGameState } from '@/lib/game'
 import { useGameStore } from '@/stores/gameStore'
 
-async function persist(roomId: string, state: GameState): Promise<void> {
+// processedActionRowId, when set, is marked processed in the SAME database
+// transaction as this state persist (see the _processed_action_id param on
+// the sync_game_state / finish_game RPCs) — see F5: two separate round
+// trips left a window where a host crash between them could cause the next
+// host to re-fetch and re-apply an action already reflected in the
+// persisted state.
+async function persist(roomId: string, state: GameState, processedActionRowId?: string): Promise<void> {
   if (state.phase === 'ended') {
-    await finishGame(roomId, state)
+    await finishGame(roomId, state, processedActionRowId)
   } else {
     const currentSeat = state.players[state.turnIndex]?.seat ?? state.turnIndex
-    await syncGameState(roomId, state, state.turnNumber, state.round, currentSeat, state.market)
+    await syncGameState(roomId, state, state.turnNumber, state.round, currentSeat, state.market, processedActionRowId)
   }
 }
 
@@ -40,7 +46,12 @@ function runSerialized<T>(fn: () => Promise<T>): Promise<T> {
   return result
 }
 
-async function applyAndPersist(roomId: string, actorId: string, action: GameAction): Promise<ActionResult<GameState>> {
+async function applyAndPersist(
+  roomId: string,
+  actorId: string,
+  action: GameAction,
+  processedActionRowId?: string,
+): Promise<ActionResult<GameState>> {
   const current = useGameStore.getState().state
   if (!current) return { ok: false, error: 'no_state' }
 
@@ -48,7 +59,7 @@ async function applyAndPersist(roomId: string, actorId: string, action: GameActi
   if (!result.ok) return result
 
   useGameStore.getState().setState(result.value)
-  await persist(roomId, result.value)
+  await persist(roomId, result.value, processedActionRowId)
 
   const gameId = useGameStore.getState().gameId
   if (gameId) persistNewLogEntries(gameId, current, result.value)
@@ -72,7 +83,12 @@ export function processQueuedAction(
   action: GameAction,
 ): Promise<void> {
   return runSerialized(async () => {
-    await applyAndPersist(roomId, actorId, action)
-    await markActionProcessed(actionRowId)
+    const result = await applyAndPersist(roomId, actorId, action, actionRowId)
+    if (!result.ok) {
+      // Rejected before any state mutation (e.g. a stale "not your turn"
+      // from a race) — nothing was persisted, so there's no atomic-mark
+      // path to piggyback on. Mark it directly so it isn't retried forever.
+      await markActionProcessed(actionRowId)
+    }
   })
 }

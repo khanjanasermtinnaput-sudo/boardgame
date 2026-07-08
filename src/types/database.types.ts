@@ -55,16 +55,22 @@ export type Database = {
       }
       credentials: {
         Row: {
+          failed_attempts: number
+          locked_until: string | null
           pin_hash: string
           profile_id: string
           updated_at: string
         }
         Insert: {
+          failed_attempts?: number
+          locked_until?: string | null
           pin_hash: string
           profile_id: string
           updated_at?: string
         }
         Update: {
+          failed_attempts?: number
+          locked_until?: string | null
           pin_hash?: string
           profile_id?: string
           updated_at?: string
@@ -159,6 +165,7 @@ export type Database = {
       games: {
         Row: {
           current_seat: number
+          final_results: Json
           id: string
           market: Json
           room_id: string
@@ -169,6 +176,7 @@ export type Database = {
         }
         Insert: {
           current_seat?: number
+          final_results?: Json
           id?: string
           market?: Json
           room_id: string
@@ -179,6 +187,7 @@ export type Database = {
         }
         Update: {
           current_seat?: number
+          final_results?: Json
           id?: string
           market?: Json
           room_id?: string
@@ -192,6 +201,45 @@ export type Database = {
             foreignKeyName: "games_room_id_fkey"
             columns: ["room_id"]
             isOneToOne: true
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      game_results: {
+        Row: {
+          created_at: string
+          net_worth: number
+          profile_id: string
+          room_id: string
+          won: boolean
+        }
+        Insert: {
+          created_at?: string
+          net_worth: number
+          profile_id: string
+          room_id: string
+          won: boolean
+        }
+        Update: {
+          created_at?: string
+          net_worth?: number
+          profile_id?: string
+          room_id?: string
+          won?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_results_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_results_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
             referencedRelation: "rooms"
             referencedColumns: ["id"]
           },
@@ -360,7 +408,7 @@ export type Database = {
         }
       }
       finish_game: {
-        Args: { _final_state: Json; _room_id: string }
+        Args: { _final_results: Json; _final_state: Json; _processed_action_id?: string | null; _room_id: string }
         Returns: undefined
       }
       join_room: {
@@ -393,6 +441,7 @@ export type Database = {
         Args: { _initial_state: Json; _room_id: string }
         Returns: {
           current_seat: number
+          final_results: Json
           id: string
           market: Json
           room_id: string
@@ -409,13 +458,14 @@ export type Database = {
         }
       }
       submit_game_result: {
-        Args: { _net_worth: number; _room_id: string; _won: boolean }
+        Args: { _room_id: string }
         Returns: undefined
       }
       sync_game_state: {
         Args: {
           _current_seat: number
           _market: Json
+          _processed_action_id?: string | null
           _room_id: string
           _round: number
           _state: Json

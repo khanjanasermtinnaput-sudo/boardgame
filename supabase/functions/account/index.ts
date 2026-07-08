@@ -21,6 +21,13 @@ const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const USERNAME_RE = /^[A-Za-z0-9_]{1,10}$/
 const PIN_RE = /^[0-9]{4}$/
 
+// PIN brute-force lockout: after MAX_FAILED_ATTEMPTS wrong guesses in a row,
+// lock the account with exponential backoff (capped) before the next guess
+// is even attempted. Resets to 0 on a successful login.
+const MAX_FAILED_ATTEMPTS = 5
+const LOCKOUT_BASE_SECONDS = 30
+const LOCKOUT_MAX_SECONDS = 900
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -121,7 +128,7 @@ Deno.serve(async (req) => {
   // Login: verify the PIN against the stored hash.
   const { data: cred, error: credLookupErr } = await admin
     .from('credentials')
-    .select('pin_hash')
+    .select('pin_hash, failed_attempts, locked_until')
     .eq('profile_id', existing.id)
     .single()
 
@@ -129,9 +136,33 @@ Deno.serve(async (req) => {
     return json({ error: 'account_error' }, 500)
   }
 
+  if (cred.locked_until && new Date(cred.locked_until).getTime() > Date.now()) {
+    return json({ error: 'account_locked', locked_until: cred.locked_until }, 429)
+  }
+
   const valid = await bcrypt.compare(pin, cred.pin_hash)
   if (!valid) {
+    const nextAttempts = cred.failed_attempts + 1
+    const update: { failed_attempts: number; locked_until?: string } = { failed_attempts: nextAttempts }
+
+    if (nextAttempts >= MAX_FAILED_ATTEMPTS) {
+      const lockoutSeconds = Math.min(
+        LOCKOUT_BASE_SECONDS * 2 ** (nextAttempts - MAX_FAILED_ATTEMPTS),
+        LOCKOUT_MAX_SECONDS,
+      )
+      update.locked_until = new Date(Date.now() + lockoutSeconds * 1000).toISOString()
+    }
+
+    await admin.from('credentials').update(update).eq('profile_id', existing.id)
+
+    if (update.locked_until) {
+      return json({ error: 'account_locked', locked_until: update.locked_until }, 429)
+    }
     return json({ error: 'invalid_pin' }, 401)
+  }
+
+  if (cred.failed_attempts > 0 || cred.locked_until) {
+    await admin.from('credentials').update({ failed_attempts: 0, locked_until: null }).eq('profile_id', existing.id)
   }
 
   // Re-link to the caller's current session if logging in from a new device.

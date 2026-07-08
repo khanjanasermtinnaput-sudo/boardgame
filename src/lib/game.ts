@@ -2,6 +2,7 @@ import { supabase } from './supabase'
 import type { Tables } from '@/types/database.types'
 import type { GameState } from '@/engine/types'
 import type { GameAction } from '@/engine/actions'
+import { buildFinalResults } from '@/engine/winConditions'
 
 export type GameRow = Tables<'games'>
 export type GameActionRow = Tables<'game_actions'>
@@ -25,7 +26,10 @@ export async function syncGameState(
   round: number,
   currentSeat: number,
   market: GameState['market'],
+  processedActionRowId?: string,
 ): Promise<void> {
+  // processedActionRowId marks the source game_actions row processed in the
+  // same transaction as this persist — see F5 in net/hostLoop.ts.
   const { error } = await supabase.rpc('sync_game_state', {
     _room_id: roomId,
     _state: state as unknown as GameRow['state'],
@@ -33,24 +37,29 @@ export async function syncGameState(
     _round: round,
     _current_seat: currentSeat,
     _market: market as unknown as GameRow['market'],
+    _processed_action_id: processedActionRowId ?? null,
   })
   if (error) throw error
 }
 
-export async function finishGame(roomId: string, finalState: GameState): Promise<void> {
+export async function finishGame(roomId: string, finalState: GameState, processedActionRowId?: string): Promise<void> {
+  // final_results is host-computed (same trust level as the rest of the
+  // authoritative state) so that submit_game_result never has to trust an
+  // individual non-host player's self-reported win/net-worth claim.
   const { error } = await supabase.rpc('finish_game', {
     _room_id: roomId,
     _final_state: finalState as unknown as GameRow['state'],
+    _final_results: buildFinalResults(finalState) as unknown as GameRow['final_results'],
+    _processed_action_id: processedActionRowId ?? null,
   })
   if (error) throw error
 }
 
-export async function submitGameResult(roomId: string, netWorth: number, won: boolean): Promise<void> {
-  const { error } = await supabase.rpc('submit_game_result', {
-    _room_id: roomId,
-    _net_worth: Math.round(netWorth),
-    _won: won,
-  })
+export async function submitGameResult(roomId: string): Promise<void> {
+  // Server reads the caller's own result from games.final_results (written
+  // by finish_game) rather than accepting a client-supplied net worth/win
+  // flag, and records it once per (room, profile) so repeat calls are no-ops.
+  const { error } = await supabase.rpc('submit_game_result', { _room_id: roomId })
   if (error) throw error
 }
 

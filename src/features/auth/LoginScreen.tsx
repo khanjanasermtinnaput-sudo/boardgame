@@ -15,6 +15,8 @@ function friendlyError(message: string): string {
   switch (message) {
     case 'invalid_pin':
       return 'Incorrect PIN. Please try again.'
+    case 'account_locked':
+      return 'Too many incorrect PIN attempts. Please wait a bit before trying again.'
     case 'invalid_username':
       return 'Usernames can be up to 10 letters, numbers, or underscores.'
     case 'username_taken':
