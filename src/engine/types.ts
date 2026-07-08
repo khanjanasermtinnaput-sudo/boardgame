@@ -204,6 +204,7 @@ export type ActionResult<T> = { ok: true; value: T } | { ok: false; error: strin
 
 export interface GameState {
   players: PlayerState[]
+  turnNumber: number
   round: number
   turnIndex: number
   market: MarketState

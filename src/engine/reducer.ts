@@ -12,11 +12,10 @@ import { buyBusiness, upgradeBusiness, sellBusiness } from './businesses'
 import { buyProperty, sellProperty } from './realEstate'
 import { takeLoan, repayLoan } from './loans'
 import { buyInsurance, cancelInsurance, mitigateLoss } from './insurance'
+import { EDUCATION_COST, EDUCATION_SALARY_BOOST } from './education'
 import { totalPassiveIncome, totalExpenses, netWorth } from './economy'
 import { evaluateWinner } from './winConditions'
 
-const EDUCATION_COST = 3000
-const EDUCATION_SALARY_BOOST = 200
 const BONUS_SPACE_AMOUNT = 400
 const CHARITY_DONATION_RATE = 0.01
 const TAX_RATE = 0.2
@@ -303,7 +302,8 @@ function findNextActivePlayerIndex(players: PlayerState[], fromIndex: number): n
 function handleEndTurn(state: GameState): ActionResult<GameState> {
   if (state.phase !== 'action') return { ok: false, error: 'not_action_phase' }
   if (state.pendingEventCardId) return { ok: false, error: 'must_ack_event_card' }
-  if (state.pendingAuction) return { ok: false, error: 'must_resolve_auction' }
+  // An unresolved auction offer simply expires (treated as declined) — it
+  // does not block ending the turn.
 
   const currentPlayer = state.players[state.turnIndex]
   if (!currentPlayer) return { ok: false, error: 'no_current_player' }
@@ -340,6 +340,7 @@ function handleEndTurn(state: GameState): ActionResult<GameState> {
     players,
     market,
     round,
+    turnNumber: state.turnNumber + 1,
     turnIndex: nextTurnIndex,
     phase: 'rolling',
     lastRoll: grantsExtraTurn ? state.lastRoll : undefined,

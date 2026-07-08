@@ -38,6 +38,7 @@ export function createInitialGameState(players: NewPlayerInput[], winCondition: 
 
   return {
     players: sortedPlayers.map(createInitialPlayerState),
+    turnNumber: 0,
     round: 1,
     turnIndex: 0,
     market: createInitialMarket(),
