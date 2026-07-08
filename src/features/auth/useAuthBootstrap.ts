@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { ensureAnonymousSession, fetchOwnProfile } from '@/lib/auth'
+import { fetchOwnProfile } from '@/lib/auth'
 import { useAuthStore } from '@/stores/authStore'
 
 // Bounds how long the app can sit on the loading splash. Without this, a
@@ -23,7 +23,6 @@ export function useAuthBootstrap(): void {
       try {
         await Promise.race([
           (async () => {
-            await ensureAnonymousSession()
             const profile = await fetchOwnProfile()
             if (!cancelled) setProfile(profile)
           })(),

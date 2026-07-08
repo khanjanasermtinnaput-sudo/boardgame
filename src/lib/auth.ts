@@ -22,20 +22,6 @@ function setRememberedUsername(username: string | null): void {
   else localStorage.removeItem(REMEMBERED_USERNAME_KEY)
 }
 
-export async function ensureAnonymousSession(): Promise<string> {
-  const { data } = await supabase.auth.getSession()
-  if (data.session) return data.session.user.id
-
-  const { data: signInData, error } = await supabase.auth.signInAnonymously()
-  if (error || !signInData.session) {
-    if (error?.message?.toLowerCase().includes('anonymous sign-ins are disabled')) {
-      throw new Error('anonymous_disabled')
-    }
-    throw new Error(error?.message ?? 'anonymous_sign_in_failed')
-  }
-  return signInData.session.user.id
-}
-
 export async function fetchOwnProfile(): Promise<Profile | null> {
   const { data: userData } = await supabase.auth.getUser()
   const uid = userData.user?.id
@@ -71,10 +57,17 @@ export interface AuthenticateResult {
   profile: Profile
 }
 
-export async function authenticate(username: string, pin: string): Promise<AuthenticateResult> {
-  await ensureAnonymousSession()
+interface AccountResponse {
+  created: boolean
+  profile: Profile
+  session: { access_token: string; refresh_token: string }
+  error?: string
+}
 
-  const { data, error } = await supabase.functions.invoke<AuthenticateResult & { error?: string }>('account', {
+export async function authenticate(username: string, pin: string): Promise<AuthenticateResult> {
+  // No prior Supabase session needed — the account function validates
+  // username/PIN itself and mints a session server-side once it succeeds.
+  const { data, error } = await supabase.functions.invoke<AccountResponse>('account', {
     body: { username, pin },
   })
 
@@ -82,12 +75,20 @@ export async function authenticate(username: string, pin: string): Promise<Authe
     const message = await extractFunctionErrorMessage(error)
     throw new Error(message ?? 'auth_failed')
   }
-  if (!data || data.error) {
+  if (!data || data.error || !data.session) {
     throw new Error(data?.error ?? 'auth_failed')
   }
 
+  const { error: setSessionErr } = await supabase.auth.setSession({
+    access_token: data.session.access_token,
+    refresh_token: data.session.refresh_token,
+  })
+  if (setSessionErr) {
+    throw new Error('session_failed')
+  }
+
   setRememberedUsername(data.profile.username)
-  return data
+  return { created: data.created, profile: data.profile }
 }
 
 export async function switchAccount(): Promise<void> {

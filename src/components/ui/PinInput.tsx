@@ -7,11 +7,18 @@ interface PinInputProps {
   label?: string
   autoFocus?: boolean
   disabled?: boolean
+  /** Focus accent color — defaults to the app's emerald; 'red' for flat/minimal surfaces like login. */
+  accent?: 'emerald' | 'red'
 }
 
 const LENGTH = 4
 
-export function PinInput({ value, onChange, label, autoFocus, disabled }: PinInputProps) {
+const focusClasses: Record<'emerald' | 'red', string> = {
+  emerald: 'focus:border-emerald-glow/60',
+  red: 'focus:border-[#DC2626]',
+}
+
+export function PinInput({ value, onChange, label, autoFocus, disabled, accent = 'emerald' }: PinInputProps) {
   const refs = useRef<Array<HTMLInputElement | null>>([])
   const digits = Array.from({ length: LENGTH }, (_, i) => value[i] ?? '')
 
@@ -62,7 +69,8 @@ export function PinInput({ value, onChange, label, autoFocus, disabled }: PinInp
             onKeyDown={(e) => handleKeyDown(i, e)}
             className={clsx(
               'h-14 w-12 rounded-xl bg-white/[0.05] border border-white/10 text-center text-2xl font-semibold text-surface-50',
-              'outline-none transition-colors focus:border-emerald-glow/60 focus:bg-white/[0.07]',
+              'outline-none transition-colors focus:bg-white/[0.07]',
+              focusClasses[accent],
             )}
           />
         ))}

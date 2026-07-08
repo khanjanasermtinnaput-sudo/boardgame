@@ -1,14 +1,17 @@
 // Net Worth — account edge function
 //
-// Handles username + 4-digit PIN authentication without email/password:
-//   - unknown username  -> create a profile + hashed PIN for the caller
-//   - known username    -> verify the PIN, then re-link the profile to the
-//                          caller's current (possibly new-device) session
+// Handles username + 4-digit PIN authentication without email/password, and
+// without depending on Supabase's anonymous-auth provider:
+//   - unknown username  -> create a real auth user (synthetic email + random
+//                          password, admin API) + profile + hashed PIN
+//   - known username    -> verify the PIN against the stored hash
 //
-// The caller must already hold an anonymous Supabase auth session (its
-// auth.uid() becomes the profile id on register, or the new device id on a
-// successful cross-device login). Credential storage/verification only ever
-// happens here, via the service-role client — the `credentials` table has no
+// Either way the function mints a Supabase Auth session server-side (via
+// signInWithPassword using a password only this function ever knows — it's
+// rotated on every login) and hands the access/refresh tokens back to the
+// client. The client never sees a username/password Supabase Auth login; it
+// only ever sees username + PIN. Credential storage/verification happens
+// here via the service-role client — the `credentials` table has no
 // client-facing RLS policies at all.
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
@@ -20,6 +23,7 @@ const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
 const USERNAME_RE = /^[A-Za-z0-9_]{1,10}$/
 const PIN_RE = /^[0-9]{4}$/
+const EMAIL_DOMAIN = 'players.networth.local'
 
 // PIN brute-force lockout: after MAX_FAILED_ATTEMPTS wrong guesses in a row,
 // lock the account with exponential backoff (capped) before the next guess
@@ -45,17 +49,20 @@ function escapeLike(value: string): string {
   return value.replace(/[%_\\]/g, (match) => `\\${match}`)
 }
 
+function syntheticEmail(usernameLower: string): string {
+  return `${usernameLower}@${EMAIL_DOMAIN}`
+}
+
+function randomPassword(): string {
+  return crypto.randomUUID() + crypto.randomUUID()
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
   if (req.method !== 'POST') {
     return json({ error: 'method_not_allowed' }, 405)
-  }
-
-  const authHeader = req.headers.get('Authorization')
-  if (!authHeader) {
-    return json({ error: 'missing_authorization' }, 401)
   }
 
   let body: { username?: string; pin?: string }
@@ -75,16 +82,9 @@ Deno.serve(async (req) => {
     return json({ error: 'invalid_pin' }, 400)
   }
 
-  const callerClient = createClient(SUPABASE_URL, ANON_KEY, {
-    global: { headers: { Authorization: authHeader } },
-  })
-  const { data: callerData, error: callerErr } = await callerClient.auth.getUser()
-  if (callerErr || !callerData.user) {
-    return json({ error: 'not_authenticated' }, 401)
-  }
-  const callerId = callerData.user.id
-
-  const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
+  const usernameLower = username.toLowerCase()
+  const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { persistSession: false } })
+  const anon = createClient(SUPABASE_URL, ANON_KEY, { auth: { persistSession: false } })
 
   const { data: existing, error: lookupErr } = await admin
     .from('profiles')
@@ -98,31 +98,56 @@ Deno.serve(async (req) => {
 
   // Register: username not taken yet.
   if (!existing) {
+    const password = randomPassword()
+    const { data: created, error: createUserErr } = await admin.auth.admin.createUser({
+      email: syntheticEmail(usernameLower),
+      password,
+      email_confirm: true,
+      user_metadata: { username },
+    })
+
+    if (createUserErr || !created.user) {
+      return json({ error: 'create_failed' }, 500)
+    }
+    const newUserId = created.user.id
+
     const pinHash = await bcrypt.hash(pin, 10)
 
-    const { data: created, error: createErr } = await admin
+    const { data: profile, error: profileErr } = await admin
       .from('profiles')
-      .insert({ id: callerId, username })
+      .insert({ id: newUserId, username })
       .select('id, username, avatar_url, games_played, wins, best_net_worth')
       .single()
 
-    if (createErr) {
-      if (createErr.code === '23505') {
+    if (profileErr) {
+      await admin.auth.admin.deleteUser(newUserId)
+      if (profileErr.code === '23505') {
         return json({ error: 'username_taken' }, 409)
       }
       return json({ error: 'create_failed' }, 500)
     }
 
-    const { error: credErr } = await admin
-      .from('credentials')
-      .insert({ profile_id: callerId, pin_hash: pinHash })
+    const { error: credErr } = await admin.from('credentials').insert({ profile_id: newUserId, pin_hash: pinHash })
 
     if (credErr) {
-      await admin.from('profiles').delete().eq('id', callerId)
+      await admin.from('profiles').delete().eq('id', newUserId)
+      await admin.auth.admin.deleteUser(newUserId)
       return json({ error: 'create_failed' }, 500)
     }
 
-    return json({ created: true, profile: created })
+    const { data: signIn, error: signInErr } = await anon.auth.signInWithPassword({
+      email: syntheticEmail(usernameLower),
+      password,
+    })
+    if (signInErr || !signIn.session) {
+      return json({ error: 'session_failed' }, 500)
+    }
+
+    return json({
+      created: true,
+      profile,
+      session: { access_token: signIn.session.access_token, refresh_token: signIn.session.refresh_token },
+    })
   }
 
   // Login: verify the PIN against the stored hash.
@@ -165,17 +190,26 @@ Deno.serve(async (req) => {
     await admin.from('credentials').update({ failed_attempts: 0, locked_until: null }).eq('profile_id', existing.id)
   }
 
-  // Re-link to the caller's current session if logging in from a new device.
-  if (existing.id !== callerId) {
-    const { error: relinkErr } = await admin
-      .from('profiles')
-      .update({ id: callerId })
-      .eq('id', existing.id)
-
-    if (relinkErr) {
-      return json({ error: 'relink_failed' }, 500)
-    }
+  // Rotate the auth password on every successful login — this function is
+  // the only caller that ever knows it, so a leaked-in-transit token from
+  // one login can't be replayed to mint another session later.
+  const newPassword = randomPassword()
+  const { error: rotateErr } = await admin.auth.admin.updateUserById(existing.id, { password: newPassword })
+  if (rotateErr) {
+    return json({ error: 'account_error' }, 500)
   }
 
-  return json({ created: false, profile: { ...existing, id: callerId } })
+  const { data: signIn, error: signInErr } = await anon.auth.signInWithPassword({
+    email: syntheticEmail(usernameLower),
+    password: newPassword,
+  })
+  if (signInErr || !signIn.session) {
+    return json({ error: 'session_failed' }, 500)
+  }
+
+  return json({
+    created: false,
+    profile: existing,
+    session: { access_token: signIn.session.access_token, refresh_token: signIn.session.refresh_token },
+  })
 })

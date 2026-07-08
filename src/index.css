@@ -72,34 +72,3 @@
     scroll-behavior: auto !important;
   }
 }
-
-/* Auth screen ambient backdrop (LoginScreen) — plain CSS animations so they're
-   automatically neutralized by the prefers-reduced-motion block above. */
-.auth-orb-drift {
-  animation: authOrbDrift 18s ease-in-out infinite alternate;
-}
-@keyframes authOrbDrift {
-  from { transform: translate(0, 0) scale(1); }
-  to { transform: translate(24px, -18px) scale(1.08); }
-}
-.auth-logo-float {
-  animation: authLogoFloat 4s ease-in-out infinite;
-}
-@keyframes authLogoFloat {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
-}
-.auth-particle {
-  position: absolute;
-  bottom: -10px;
-  border-radius: 9999px;
-  opacity: 0;
-  animation: authParticleRise var(--auth-dur, 18s) linear infinite;
-  animation-delay: var(--auth-delay, 0s);
-}
-@keyframes authParticleRise {
-  0% { transform: translate(0, 0); opacity: 0; }
-  10% { opacity: 0.5; }
-  90% { opacity: 0.25; }
-  100% { transform: translate(var(--auth-drift, 0px), -110vh); opacity: 0; }
-}
