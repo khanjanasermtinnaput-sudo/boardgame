@@ -3,10 +3,12 @@ import { useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { PlayerDashboard } from '@/components/game/PlayerDashboard'
-import { HandStrip } from '@/components/game/HandStrip'
+import { HandGrid } from '@/components/game/HandGrid'
+import { CircularBoard } from '@/components/game/CircularBoard'
 import { PhaseCenterPanel } from '@/components/game/PhaseCenterPanel'
 import { ChatPanel } from '@/components/game/ChatPanel'
-import { InvestmentPanel } from '@/features/game/panels/InvestmentPanel'
+import { BankPanel } from '@/features/game/panels/BankPanel'
+import { HostControlPanel } from '@/features/game/panels/HostControlPanel'
 import { EndGameScreen } from '@/features/endgame/EndGameScreen'
 import { useAuthStore } from '@/stores/authStore'
 import { useRoomStore } from '@/stores/roomStore'
@@ -14,7 +16,16 @@ import { useGameStore } from '@/stores/gameStore'
 import { useRealtimeRoom } from '@/hooks/useRealtimeRoom'
 import { useGameState, phaseName } from '@/hooks/useGameState'
 import { gameErrorMessage, setGameReady } from '@/lib/game'
-import type { AssetInstance, DebtCard, GlobalEventState, HandCard, IncomeSummary, MarketMultipliers, PersonalEventState } from '@/engine/types'
+import type {
+  AssetInstance,
+  DebtCard,
+  GlobalEventState,
+  HandCard,
+  IncomeSummary,
+  MarketMultipliers,
+  PersonalEventState,
+  RollState,
+} from '@/engine/types'
 
 export function GameScreen() {
   const { roomId } = useParams<{ roomId: string }>()
@@ -22,6 +33,8 @@ export function GameScreen() {
   const room = useRoomStore((s) => s.room)
   const { game, players } = useGameStore()
   const history = useGameStore((s) => s.history)
+  const profiles = useRoomStore((s) => s.profiles)
+  const roomPlayers = useRoomStore((s) => s.players)
   const [chatOpen, setChatOpen] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [readyError, setReadyError] = useState<string | null>(null)
@@ -33,6 +46,7 @@ export function GameScreen() {
   const playerList = useMemo(() => Object.values(players).sort((a, b) => a.seat - b.seat), [players])
   const readyCount = playerList.filter((p) => p.ready).length
   const self = profile ? players[profile.id] : undefined
+  const isHost = room?.host_id === profile?.id
 
   async function handleToggleReady() {
     if (!game || !self) return
@@ -49,7 +63,7 @@ export function GameScreen() {
 
   if (!roomId) return null
 
-  if (!game || !self || playerList.length === 0) {
+  if (!game || !profile || !self || playerList.length === 0) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <p className="text-sm text-[color:var(--color-text-muted)]">Loading game…</p>
@@ -69,6 +83,7 @@ export function GameScreen() {
   const personalEvent = 'id' in (self.personal_event as object) ? (self.personal_event as unknown as PersonalEventState) : null
   const incomeSummary =
     'net_change' in (self.income_summary as object) ? (self.income_summary as unknown as IncomeSummary) : null
+  const lastRoll = 'tile_index' in (game.last_roll as object) ? (game.last_roll as unknown as RollState) : null
 
   return (
     <div className="mx-auto flex min-h-screen max-w-5xl flex-col gap-6 px-4 py-6">
@@ -105,19 +120,47 @@ export function GameScreen() {
         </div>
       </header>
 
+      {game.paused && (
+        <p className="rounded-md border border-[color:var(--color-red)] bg-[color:var(--color-surface)] px-4 py-2 text-sm text-[color:var(--color-red)]">
+          The host has paused the game.
+        </p>
+      )}
+
+      <CircularBoard
+        lastRoll={lastRoll}
+        players={playerList.map((p) => ({
+          profileId: p.profile_id,
+          tokenColor: roomPlayers.find((rp) => rp.profile_id === p.profile_id)?.token_color ?? null,
+        }))}
+      />
+
       <PhaseCenterPanel phase={game.phase} globalEvent={globalEvent} personalEvent={personalEvent} incomeSummary={incomeSummary} />
 
       <div className="flex flex-col gap-3">
-        <PlayerDashboard player={self} age={game.age} />
-
-        {game.phase === 1 ? (
-          <InvestmentPanel gameId={game.id} hand={hand} assets={assets} debts={debts} cash={self.cash} market={market} />
-        ) : (
-          <HandStrip hand={hand} />
+        {isHost && (
+          <HostControlPanel
+            gameId={game.id}
+            phase={game.phase}
+            paused={game.paused}
+            players={playerList.map((p) => ({ profileId: p.profile_id, username: profiles[p.profile_id]?.username ?? 'Player' }))}
+            selfProfileId={profile.id}
+          />
         )}
 
+        <PlayerDashboard player={self} age={game.age} />
+
+        <BankPanel gameId={game.id} assets={assets} debts={debts} cash={self.cash} market={market} />
+
+        <HandGrid gameId={game.id} hand={hand} market={market} cash={self.cash} buyable={game.phase === 2} />
+
         {readyError && <p className="text-sm text-[color:var(--color-red)]">{readyError}</p>}
-        <Button className="self-end" variant={self.ready ? 'secondary' : 'primary'} onClick={handleToggleReady} loading={togglingReady}>
+        <Button
+          className="self-end"
+          variant={self.ready ? 'secondary' : 'primary'}
+          onClick={handleToggleReady}
+          loading={togglingReady}
+          disabled={game.paused}
+        >
           {self.ready ? 'Not Ready' : 'Ready'}
         </Button>
       </div>

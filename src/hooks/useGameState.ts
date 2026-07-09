@@ -4,11 +4,11 @@ import { fetchGame, fetchGamePlayers, type Game, type GamePlayer } from '@/lib/g
 import { useGameStore } from '@/stores/gameStore'
 
 const PHASE_NAMES: Record<number, string> = {
-  1: 'Investment Phase',
-  2: 'Global Event',
-  3: 'Personal Event',
+  1: 'Awaiting Round Start',
+  2: 'Invest / Buy',
+  3: 'Crisis',
   4: 'Income & Expense',
-  5: 'Refill Investment Cards',
+  5: 'Refill',
 }
 
 export function phaseName(phase: number): string {
@@ -58,6 +58,37 @@ export function useGameState(roomId: string | undefined, selfProfileId: string |
                 description: evt.description ?? '',
               })
             }
+          },
+        )
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'game_log', filter: `game_id=eq.${game.id}` },
+          (payload) => {
+            const row = payload.new as { id: string; kind: string; entry: Record<string, unknown> }
+            const entry = row.entry ?? {}
+            let title = 'Host Action'
+            let description = ''
+
+            if (row.kind === 'round_advance') {
+              title = 'Round Started'
+              description = `Rolled ${entry.die1}+${entry.die2} = ${entry.total}`
+            } else if (row.kind === 'host_adjust_player') {
+              const delta = Number(entry.cash_delta ?? 0)
+              title = 'Host Adjustment'
+              description = `Cash ${delta >= 0 ? '+' : ''}${delta}${entry.reason ? ` — ${entry.reason}` : ''}`
+            } else if (row.kind === 'host_set_paused') {
+              title = entry.paused ? 'Game Paused' : 'Game Resumed'
+            } else if (row.kind === 'host_kick') {
+              title = 'Player Kicked'
+            }
+
+            pushHistory({
+              id: `log:${row.id}`,
+              age: game.age,
+              kind: 'host_action',
+              title,
+              description,
+            })
           },
         )
         .on(

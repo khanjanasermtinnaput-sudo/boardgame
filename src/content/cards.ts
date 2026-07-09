@@ -38,6 +38,19 @@ export const CATEGORY_LABELS: Record<CardCategory, string> = {
   special_asset: 'Special Asset',
 }
 
+export const CATEGORY_ICONS: Record<CardCategory, string> = {
+  house: '🏠',
+  business: '💼',
+  growth_stock: '📈',
+  dividend_stock: '💵',
+  gold: '💰',
+  car: '🚗',
+  land: '🗺️',
+  commercial_building: '🏢',
+  crypto: '🪙',
+  special_asset: '💎',
+}
+
 export const CARD_CATALOG: CatalogCard[] = [
   // House
   { id: 'house_1', name: 'Suburban Starter House', category: 'house', purchasePrice: 15000, baseValue: 15000, passiveIncome: 550, description: 'A modest three-bedroom house in a quiet suburb, rented to a young family.' },

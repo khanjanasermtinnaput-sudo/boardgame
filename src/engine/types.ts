@@ -67,6 +67,13 @@ export interface IncomeSummary {
 
 export type MarketMultipliers = Partial<Record<CardCategory, number>>
 
+export interface RollState {
+  die1: number
+  die2: number
+  total: number
+  tile_index: number
+}
+
 export interface GameRow {
   id: string
   room_id: string
@@ -74,8 +81,10 @@ export interface GameRow {
   age: number
   phase: GamePhase
   round_no: number
+  paused: boolean
   market: MarketMultipliers
   global_event: GlobalEventState | Record<string, never>
+  last_roll: RollState | Record<string, never>
   updated_at: string
 }
 

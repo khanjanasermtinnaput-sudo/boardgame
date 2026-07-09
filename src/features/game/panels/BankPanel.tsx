@@ -3,47 +3,35 @@ import { Button } from '@/components/ui/Button'
 import { Panel } from '@/components/ui/Panel'
 import { TextInput } from '@/components/ui/TextInput'
 import { money } from '@/lib/format'
-import { gameErrorMessage, borrow, buyCard, repay, sellAsset } from '@/lib/game'
-import { buyPrice, sellPrice } from '@/engine/netWorth'
+import { gameErrorMessage, borrow, repay, sellAsset } from '@/lib/game'
+import { sellPrice } from '@/engine/netWorth'
 import { CATEGORY_LABELS } from '@/content/cards'
-import type { AssetInstance, DebtCard, HandCard, MarketMultipliers } from '@/engine/types'
+import type { AssetInstance, DebtCard, MarketMultipliers } from '@/engine/types'
 
-interface InvestmentPanelProps {
+interface BankPanelProps {
   gameId: string
-  hand: HandCard[]
   assets: AssetInstance[]
   debts: DebtCard[]
   cash: number
   market: MarketMultipliers
 }
 
-export function InvestmentPanel({ gameId, hand, assets, debts, cash, market }: InvestmentPanelProps) {
+/** Always-on borrow / repay / sell surface — available in every phase, not gated to Buy. */
+export function BankPanel({ gameId, assets, debts, cash, market }: BankPanelProps) {
   const [error, setError] = useState<string | null>(null)
-  const [busyCardId, setBusyCardId] = useState<string | null>(null)
+  const [busyInstanceId, setBusyInstanceId] = useState<string | null>(null)
   const [borrowAmount, setBorrowAmount] = useState(1000)
   const [showPortfolio, setShowPortfolio] = useState(false)
 
-  async function handleBuy(cardId: string) {
-    setBusyCardId(cardId)
-    setError(null)
-    try {
-      await buyCard(gameId, cardId)
-    } catch (err) {
-      setError(gameErrorMessage(err))
-    } finally {
-      setBusyCardId(null)
-    }
-  }
-
   async function handleSell(instanceId: string) {
-    setBusyCardId(instanceId)
+    setBusyInstanceId(instanceId)
     setError(null)
     try {
       await sellAsset(gameId, instanceId)
     } catch (err) {
       setError(gameErrorMessage(err))
     } finally {
-      setBusyCardId(null)
+      setBusyInstanceId(null)
     }
   }
 
@@ -66,7 +54,8 @@ export function InvestmentPanel({ gameId, hand, assets, debts, cash, market }: I
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <Panel className="flex flex-col gap-3 p-4">
+      <h2 className="text-sm font-semibold text-[color:var(--color-text-muted)]">Bank</h2>
       {error && <p className="text-sm text-[color:var(--color-red)]">{error}</p>}
 
       <div className="flex flex-wrap items-center gap-3">
@@ -90,7 +79,7 @@ export function InvestmentPanel({ gameId, hand, assets, debts, cash, market }: I
       </div>
 
       {showPortfolio && (
-        <Panel className="flex flex-col gap-3 p-4">
+        <div className="flex flex-col gap-3">
           <div>
             <h3 className="mb-2 text-sm font-semibold text-[color:var(--color-text-muted)]">Owned Assets</h3>
             {assets.length === 0 && <p className="text-sm text-[color:var(--color-text-faint)]">No assets owned yet.</p>}
@@ -106,7 +95,7 @@ export function InvestmentPanel({ gameId, hand, assets, debts, cash, market }: I
                   <Button
                     size="sm"
                     variant="secondary"
-                    disabled={busyCardId === a.instance_id}
+                    disabled={busyInstanceId === a.instance_id}
                     onClick={() => handleSell(a.instance_id)}
                   >
                     Sell for {money(sellPrice(a.base_value, market, a.category))}
@@ -133,32 +122,8 @@ export function InvestmentPanel({ gameId, hand, assets, debts, cash, market }: I
               ))}
             </div>
           </div>
-        </Panel>
+        </div>
       )}
-
-      <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-2">
-        {hand.map((card) => (
-          <Panel key={card.card_id} className="flex w-48 shrink-0 flex-col gap-2 p-3">
-            <div>
-              <p className="text-xs uppercase tracking-wide text-[color:var(--color-text-faint)]">{CATEGORY_LABELS[card.category]}</p>
-              <p className="text-sm font-semibold text-[color:var(--color-text)]">{card.name}</p>
-            </div>
-            <p className="line-clamp-3 text-xs text-[color:var(--color-text-muted)]">{card.description}</p>
-            <div className="mt-auto flex flex-col gap-1 text-xs text-[color:var(--color-text-faint)]">
-              <span>Base Value: {money(card.base_value)}</span>
-              <span>Passive Income: {money(card.passive_income)}/round</span>
-            </div>
-            <Button
-              size="sm"
-              disabled={busyCardId === card.card_id || cash < buyPrice(card.purchase_price, market, card.category)}
-              onClick={() => handleBuy(card.card_id)}
-            >
-              Buy for {money(buyPrice(card.purchase_price, market, card.category))}
-            </Button>
-          </Panel>
-        ))}
-        {hand.length === 0 && <p className="text-sm text-[color:var(--color-text-faint)]">Your hand is empty.</p>}
-      </div>
-    </div>
+    </Panel>
   )
 }

@@ -81,13 +81,22 @@ export function PhaseCenterPanel({ phase, globalEvent, personalEvent, incomeSumm
 
       {phase === 1 && (
         <p className="text-sm text-[color:var(--color-text-muted)]">
-          Buy asset cards from your hand below, borrow or repay debt, and review your portfolio. Press Ready when you're done.
+          Waiting for the host to start the round — the dice roll reveals this round's market tile.
         </p>
       )}
 
-      {phase === 2 && (globalEvent ? <GlobalEventBody event={globalEvent} /> : (
-        <p className="text-sm text-[color:var(--color-text-faint)]">Waiting for the Global Event to resolve…</p>
-      ))}
+      {phase === 2 && (
+        <div className="flex flex-col gap-3">
+          {globalEvent ? (
+            <GlobalEventBody event={globalEvent} />
+          ) : (
+            <p className="text-sm text-[color:var(--color-text-faint)]">Waiting for the market tile to resolve…</p>
+          )}
+          <p className="text-sm text-[color:var(--color-text-muted)]">
+            Buy asset cards from your hand below, use the Bank to borrow, repay, or sell any time. Press Ready when you're done.
+          </p>
+        </div>
+      )}
 
       {phase === 3 && (personalEvent ? <PersonalEventBody event={personalEvent} /> : (
         <p className="text-sm text-[color:var(--color-text-faint)]">Waiting for your Personal Event…</p>
@@ -97,7 +106,7 @@ export function PhaseCenterPanel({ phase, globalEvent, personalEvent, incomeSumm
         <p className="text-sm text-[color:var(--color-text-faint)]">Calculating income and expenses…</p>
       ))}
 
-      {phase === 5 && <p className="text-sm text-[color:var(--color-text-muted)]">Your investment hand has been refilled to 6 cards.</p>}
+      {phase === 5 && <p className="text-sm text-[color:var(--color-text-muted)]">Your investment hand has been refilled to 4 cards.</p>}
     </Panel>
   )
 }

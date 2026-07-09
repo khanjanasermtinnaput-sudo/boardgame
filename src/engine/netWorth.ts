@@ -9,7 +9,7 @@ import type { AssetInstance, DebtCard, MarketMultipliers } from './types'
 
 export const STARTING_CASH = 10000
 export const STARTING_SALARY = 2000
-export const MAX_HAND_SIZE = 6
+export const MAX_HAND_SIZE = 4
 export const MIN_AGE = 20
 export const MAX_AGE = 70
 export const AGE_STEP = 10

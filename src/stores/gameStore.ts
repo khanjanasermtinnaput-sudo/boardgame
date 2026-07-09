@@ -4,7 +4,7 @@ import type { Game, GamePlayer } from '@/lib/game'
 export interface HistoryEntry {
   id: string
   age: number
-  kind: 'global_event' | 'personal_event' | 'income_summary'
+  kind: 'global_event' | 'personal_event' | 'income_summary' | 'host_action'
   title: string
   description: string
 }

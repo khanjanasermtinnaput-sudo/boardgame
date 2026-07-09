@@ -7,6 +7,7 @@ import {
   isLastAge,
   livingCostForAge,
   maintenanceFor,
+  MAX_HAND_SIZE,
   nextAge,
   sellPrice,
   taxFor,
@@ -135,6 +136,12 @@ describe('income & expense helpers', () => {
   it('totalOutstandingDebt sums every debt card', () => {
     const debts = [debt({ outstanding: 1000 }), debt({ debt_id: 'd2', outstanding: 2500 })]
     expect(totalOutstandingDebt(debts)).toBe(3500)
+  })
+})
+
+describe('hand size', () => {
+  it('is rebalanced to 4', () => {
+    expect(MAX_HAND_SIZE).toBe(4)
   })
 })
 

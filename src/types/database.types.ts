@@ -231,7 +231,9 @@ export type Database = {
           age: number
           global_event: Json
           id: string
+          last_roll: Json
           market: Json
+          paused: boolean
           phase: number
           room_id: string
           round_no: number
@@ -242,7 +244,9 @@ export type Database = {
           age?: number
           global_event?: Json
           id?: string
+          last_roll?: Json
           market?: Json
+          paused?: boolean
           phase?: number
           room_id: string
           round_no?: number
@@ -253,7 +257,9 @@ export type Database = {
           age?: number
           global_event?: Json
           id?: string
+          last_roll?: Json
           market?: Json
+          paused?: boolean
           phase?: number
           room_id?: string
           round_no?: number
@@ -266,6 +272,48 @@ export type Database = {
             columns: ["room_id"]
             isOneToOne: true
             referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      game_log: {
+        Row: {
+          actor_profile_id: string | null
+          created_at: string
+          entry: Json
+          game_id: string
+          id: string
+          kind: string
+        }
+        Insert: {
+          actor_profile_id?: string | null
+          created_at?: string
+          entry?: Json
+          game_id: string
+          id?: string
+          kind: string
+        }
+        Update: {
+          actor_profile_id?: string | null
+          created_at?: string
+          entry?: Json
+          game_id?: string
+          id?: string
+          kind?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_log_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_log_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
             referencedColumns: ["id"]
           },
         ]
@@ -503,13 +551,39 @@ export type Database = {
         Args: { _game_id: string; _ready: boolean }
         Returns: undefined
       }
+      game_host_adjust_player: {
+        Args: {
+          _asset_add?: Json
+          _cash_delta?: number
+          _debt_add?: Json
+          _game_id: string
+          _hand_add?: Json
+          _reason?: string
+          _target: string
+        }
+        Returns: undefined
+      }
+      game_host_advance: {
+        Args: { _game_id: string }
+        Returns: undefined
+      }
+      game_host_kick: {
+        Args: { _game_id: string; _target: string }
+        Returns: undefined
+      }
+      game_host_set_paused: {
+        Args: { _game_id: string; _paused: boolean }
+        Returns: undefined
+      }
       game_start: {
         Args: { _room_id: string }
         Returns: {
           age: number
           global_event: Json
           id: string
+          last_roll: Json
           market: Json
+          paused: boolean
           phase: number
           room_id: string
           round_no: number
