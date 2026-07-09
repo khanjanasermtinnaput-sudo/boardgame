@@ -5,7 +5,11 @@ import path from 'node:path'
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: '/boardgame/',
+  // GitHub Pages serves this repo from /boardgame/, but Vercel (which builds
+  // the same repo via its Git integration) serves dist/ from the domain
+  // root. Vercel sets VERCEL=1 during every build, so pick the base
+  // accordingly instead of hardcoding the GitHub Pages path for both targets.
+  base: process.env.VERCEL ? '/' : '/boardgame/',
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {

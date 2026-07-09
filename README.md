@@ -66,11 +66,25 @@ together, [`docs/rules.md`](docs/rules.md) for the full game rules, and
 
 ## Deployment
 
-Pushes to the trunk branch build and deploy to GitHub Pages via
-`.github/workflows/deploy.yml` (needs `VITE_SUPABASE_URL` and
-`VITE_SUPABASE_ANON_KEY` set as repository secrets). The app uses
-`HashRouter` and a `/boardgame/` base path so it works as a static site with
-no server-side routing.
+The repo is deployed to two targets in parallel:
+
+- **GitHub Pages** — pushes to the trunk branch build and deploy via
+  `.github/workflows/deploy.yml` (needs `VITE_SUPABASE_URL` and
+  `VITE_SUPABASE_ANON_KEY` set as repository secrets), served from
+  `/boardgame/`.
+- **Vercel** — connected directly to this GitHub repo via Vercel's Git
+  integration, which auto-builds on every push and serves `dist/` from
+  the domain root.
+
+Because the two hosts serve from different paths, `vite.config.ts` picks
+the Vite `base` at build time instead of hardcoding it:
+`base: process.env.VERCEL ? '/' : '/boardgame/'` (Vercel sets `VERCEL=1`
+during every build). Don't hardcode `base` back to `/boardgame/` — that
+breaks Vercel by pointing the built JS/CSS bundle URLs at a path that
+doesn't exist there, producing 404s on every asset and a black screen.
+
+The app uses `HashRouter` so no server-side routing config is needed on
+either host.
 
 ## License
 
