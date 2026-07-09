@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
 import { createPortal } from 'react-dom'
 
 interface ModalProps {
@@ -11,33 +10,21 @@ interface ModalProps {
 }
 
 export function Modal({ open, onClose, title, children, maxWidthClassName = 'max-w-md' }: ModalProps) {
+  if (!open) return null
+
   return createPortal(
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={onClose}
-        >
-          <motion.div
-            role="dialog"
-            aria-modal="true"
-            aria-label={title}
-            className={`glass-panel-solid w-full ${maxWidthClassName} rounded-2xl p-6`}
-            initial={{ opacity: 0, scale: 0.95, y: 12 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 12 }}
-            transition={{ type: 'spring', stiffness: 320, damping: 28 }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {title && <h2 className="mb-4 text-lg font-semibold text-surface-50">{title}</h2>}
-            {children}
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>,
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        className={`w-full ${maxWidthClassName} rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-6`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {title && <h2 className="mb-4 text-lg font-semibold text-[color:var(--color-text)]">{title}</h2>}
+        {children}
+      </div>
+    </div>,
     document.body,
   )
 }

@@ -1,2 +1,0 @@
-export const EDUCATION_COST = 3000
-export const EDUCATION_SALARY_BOOST = 200

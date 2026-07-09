@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
-import { GlassCard } from '@/components/ui/GlassCard'
+import { Panel } from '@/components/ui/Panel'
 import { Button } from '@/components/ui/Button'
 import { joinPublicRoom, listPublicRooms, type Room } from '@/lib/rooms'
 import { JoinRoomModal } from '@/features/room/JoinRoomModal'
@@ -41,8 +40,8 @@ export function PlayScreen() {
     <div className="mx-auto flex min-h-screen max-w-2xl flex-col gap-6 px-4 py-10">
       <header className="flex items-center justify-between">
         <div>
-          <h1 className="font-display text-2xl font-bold text-surface-50">Play Now</h1>
-          <p className="text-sm text-surface-400">Join a public game or start your own.</p>
+          <h1 className="text-2xl font-bold text-[color:var(--color-text)]">Play Now</h1>
+          <p className="text-sm text-[color:var(--color-text-muted)]">Join a public game or start your own.</p>
         </div>
         <Button variant="secondary" size="sm" onClick={() => navigate('/home')}>
           Back
@@ -58,32 +57,25 @@ export function PlayScreen() {
         </Button>
       </div>
 
-      {error && <p className="text-sm text-rose-glow">{error}</p>}
+      {error && <p className="text-sm text-[color:var(--color-red)]">{error}</p>}
 
       <div className="flex flex-col gap-3">
-        {rooms === null && <p className="text-sm text-surface-400">Loading public rooms…</p>}
+        {rooms === null && <p className="text-sm text-[color:var(--color-text-muted)]">Loading public rooms…</p>}
         {rooms !== null && rooms.length === 0 && (
-          <GlassCard className="p-6 text-center text-sm text-surface-400">
+          <Panel className="p-6 text-center text-sm text-[color:var(--color-text-muted)]">
             No public rooms right now — why not create one?
-          </GlassCard>
+          </Panel>
         )}
-        {rooms?.map((room, i) => (
-          <motion.div
-            key={room.id}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.03 * i }}
-          >
-            <GlassCard className="flex items-center justify-between p-4">
-              <div>
-                <p className="font-medium text-surface-50">{room.name}</p>
-                <p className="text-xs text-surface-400">Up to {room.max_players} players</p>
-              </div>
-              <Button size="sm" loading={joiningId === room.id} onClick={() => handleQuickJoin(room)}>
-                Join
-              </Button>
-            </GlassCard>
-          </motion.div>
+        {rooms?.map((room) => (
+          <Panel key={room.id} className="flex items-center justify-between p-4">
+            <div>
+              <p className="font-medium text-[color:var(--color-text)]">{room.name}</p>
+              <p className="text-xs text-[color:var(--color-text-muted)]">Up to {room.max_players} players</p>
+            </div>
+            <Button size="sm" loading={joiningId === room.id} onClick={() => handleQuickJoin(room)}>
+              Join
+            </Button>
+          </Panel>
         ))}
       </div>
 

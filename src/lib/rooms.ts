@@ -1,6 +1,5 @@
 import { supabase } from './supabase'
 import type { Tables } from '@/types/database.types'
-import type { WinCondition } from '@/engine/types'
 
 export type Room = Tables<'rooms'>
 export type RoomPlayer = Tables<'room_players'>
@@ -10,7 +9,6 @@ export interface CreateRoomParams {
   name: string
   maxPlayers: number
   isPublic: boolean
-  winCondition: WinCondition
 }
 
 const ROOM_ERROR_MESSAGES: Record<string, string> = {
@@ -32,11 +30,15 @@ export function roomErrorMessage(err: unknown): string {
 }
 
 export async function createRoom(params: CreateRoomParams): Promise<Room> {
+  // The game has a single fixed win condition (highest net worth at age
+  // 70) — there's nothing for the host to configure, so this is always
+  // an empty object; the column exists only because create_room's
+  // signature requires it.
   const { data, error } = await supabase.rpc('create_room', {
     _name: params.name,
     _max_players: params.maxPlayers,
     _is_public: params.isPublic,
-    _win_condition: params.winCondition,
+    _win_condition: {},
   })
   if (error) throw error
   return data
@@ -139,12 +141,11 @@ export async function fetchChatMessages(roomId: string): Promise<ChatMessage[]> 
 
 export async function updateRoomSettings(
   roomId: string,
-  updates: { name?: string; maxPlayers?: number; winCondition?: WinCondition },
+  updates: { name?: string; maxPlayers?: number },
 ): Promise<void> {
-  const payload: Partial<Pick<Room, 'name' | 'max_players' | 'win_condition'>> = {}
+  const payload: Partial<Pick<Room, 'name' | 'max_players'>> = {}
   if (updates.name !== undefined) payload.name = updates.name
   if (updates.maxPlayers !== undefined) payload.max_players = updates.maxPlayers
-  if (updates.winCondition !== undefined) payload.win_condition = updates.winCondition as unknown as Room['win_condition']
   const { error } = await supabase.from('rooms').update(payload).eq('id', roomId)
   if (error) throw error
 }

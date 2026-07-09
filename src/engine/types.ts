@@ -1,220 +1,97 @@
-// Net Worth — core engine types. Pure data, no React/Supabase dependency.
+// Mirrors the jsonb shapes stored in game_players / games. This is the
+// client's view of server-authoritative state — nothing here is ever
+// computed client-side and trusted; it's for typing realtime payloads and
+// driving pure display/prediction helpers in netWorth.ts.
+import type { CardCategory } from '@/content/cards'
 
-export type SpaceType =
-  | 'payday'
-  | 'investment'
-  | 'business'
-  | 'real_estate'
-  | 'market'
-  | 'tax'
-  | 'salary'
-  | 'event'
-  | 'loan'
-  | 'auction'
-  | 'insurance'
-  | 'education'
-  | 'economic_crisis'
-  | 'bonus'
-  | 'charity'
-  | 'vacation'
-  | 'random'
+export type GamePhase = 1 | 2 | 3 | 4 | 5
+export type GameStatus = 'active' | 'finished'
 
-export interface BoardSpace {
-  id: number
-  type: SpaceType
+export interface HandCard {
+  card_id: string
   name: string
+  category: CardCategory
+  purchase_price: number
+  base_value: number
+  passive_income: number
   description: string
 }
 
-export type InvestmentCategory = 'growth' | 'dividend' | 'value' | 'high_risk'
-export type AssetClass = 'stock' | 'bond'
-
-export interface InvestmentInstrument {
-  id: string
+export interface AssetInstance {
+  instance_id: string
+  card_id: string
   name: string
-  ticker: string
-  assetClass: AssetClass
-  category: InvestmentCategory
-  basePrice: number
-  risk: number
-  baseReturn: number
-  dividendYield: number
-  volatility: number
-  description: string
+  category: CardCategory
+  base_value: number
+  passive_income: number
+  bought_at_price: number
+  acquired_age: number
 }
 
-export interface BusinessTemplate {
-  id: string
-  name: string
-  purchasePrice: number
-  baseIncome: number
-  maintenance: number
-  upgradeCost: number
-  upgradeIncomeBoost: number
-  maxLevel: number
-  description: string
-}
-
-export interface PropertyTemplate {
-  id: string
-  name: string
-  category: string
-  purchasePrice: number
-  baseRentalIncome: number
-  maintenance: number
-  appreciationRate: number
-  description: string
-}
-
-export type EventCategory =
-  | 'positive'
-  | 'negative'
-  | 'neutral'
-  | 'economic'
-  | 'business'
-  | 'family'
-  | 'health'
-  | 'investment'
-  | 'tax'
-
-export type EventEffectKind =
-  | 'cash_delta'
-  | 'cash_percent_of_net_worth'
-  | 'cash_percent_of_cash'
-  | 'income_delta'
-  | 'expense_delta'
-  | 'liability_delta'
-  | 'force_sell_random_asset'
-  | 'skip_next_turn'
-  | 'move_spaces'
-  | 'market_shift'
-  | 'lose_random_investment_percent'
-
-export interface EventEffect {
-  kind: EventEffectKind
-  amount?: number
-  percent?: number
-  regime?: MarketRegimeType
-  spaces?: number
-}
-
-export interface EventCard {
-  id: string
-  category: EventCategory
-  title: string
-  flavor: string
-  effects: EventEffect[]
-}
-
-export type MarketRegimeType =
-  | 'bull'
-  | 'bear'
-  | 'inflation'
-  | 'recession'
-  | 'interest_rate'
-  | 'tech_boom'
-  | 'energy_crisis'
-  | 'crash'
-
-export interface MarketRegimeDef {
-  type: MarketRegimeType
-  name: string
-  description: string
-  categoryMultipliers: Record<InvestmentCategory, number>
-  propertyMultiplier: number
-  businessIncomeMultiplier: number
-  interestRateDelta: number
-}
-
-export interface MarketState {
-  regime: MarketRegimeType
-  roundsRemaining: number
-  interestRate: number
-  prices: Record<string, number>
-  propertyIndex: number
-}
-
-export interface OwnedInvestment {
-  instrumentId: string
-  quantity: number
-  avgBuyPrice: number
-}
-
-export interface OwnedBusiness {
-  templateId: string
-  level: number
-  purchasePrice: number
-}
-
-export interface OwnedProperty {
-  id: string
-  templateId: string
-  purchasePrice: number
-  purchaseRound: number
-}
-
-export interface Loan {
-  id: string
+export interface DebtCard {
+  debt_id: string
   principal: number
-  balance: number
-  interestRate: number
+  outstanding: number
+  created_age: number
 }
 
-export interface PlayerState {
+export interface GlobalEventState {
   id: string
   name: string
-  tokenColor: string
+  type: 'positive_market' | 'economic_slowdown' | 'black_event'
+  description: string
+  effects: Partial<Record<CardCategory, number>>
+}
+
+export interface PersonalEventState {
+  id: string
+  name: string
+  description: string
+  effect_kind: 'cash' | 'cash_pct_net_worth' | 'salary' | 'grant_card'
+  amount: number | null
+  pct: number | null
+}
+
+export interface IncomeSummary {
+  salary: number
+  passive_income: number
+  gross_income: number
+  living_cost: number
+  maintenance: number
+  tax: number
+  net_change: number
+  debt_count: number
+  interest_rate: number
+  interest_total: number
+}
+
+export type MarketMultipliers = Partial<Record<CardCategory, number>>
+
+export interface GameRow {
+  id: string
+  room_id: string
+  status: GameStatus
+  age: number
+  phase: GamePhase
+  round_no: number
+  market: MarketMultipliers
+  global_event: GlobalEventState | Record<string, never>
+  updated_at: string
+}
+
+export interface GamePlayerRow {
+  game_id: string
+  profile_id: string
   seat: number
-  position: number
   cash: number
   salary: number
-  baseExpenses: number
-  investments: OwnedInvestment[]
-  businesses: OwnedBusiness[]
-  properties: OwnedProperty[]
-  loans: Loan[]
-  insured: boolean
-  educated: boolean
-  skipTurns: number
-  bankrupt: boolean
-}
-
-export type AuctionKind = 'investment' | 'business' | 'property'
-
-export interface AuctionOffer {
-  kind: AuctionKind
-  id: string
-  price: number
-}
-
-export type WinCondition =
-  | { type: 'target'; targetNetWorth: number }
-  | { type: 'rounds'; totalRounds: number }
-  | { type: 'survival' }
-
-export interface LogEntry {
-  seq: number
-  message: string
-  timestamp: number
-}
-
-export type GamePhase = 'rolling' | 'resolving' | 'action' | 'ended'
-
-export type ActionResult<T> = { ok: true; value: T } | { ok: false; error: string }
-
-export interface GameState {
-  players: PlayerState[]
-  turnNumber: number
-  round: number
-  turnIndex: number
-  market: MarketState
-  log: LogEntry[]
-  winCondition: WinCondition
-  phase: GamePhase
-  lastRoll?: [number, number]
-  doublesStreak: number
-  pendingEventCardId?: string
-  pendingAuction?: AuctionOffer
-  winnerId?: string
-  tiedPlayerIds?: string[]
+  hand: HandCard[]
+  assets: AssetInstance[]
+  debts: DebtCard[]
+  passive_income: number
+  net_worth: number
+  ready: boolean
+  personal_event: PersonalEventState | Record<string, never>
+  income_summary: IncomeSummary | Record<string, never>
+  updated_at: string
 }

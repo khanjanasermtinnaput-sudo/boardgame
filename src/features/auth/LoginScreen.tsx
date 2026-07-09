@@ -80,7 +80,7 @@ export function LoginScreen() {
       <div className="w-full max-w-[420px]">
         <div className="mb-8 text-center">
           <h1 className="text-2xl font-bold tracking-tight text-white">NET WORTH ONLINE</h1>
-          <p className="mt-1 text-sm text-gray-400">Financial Strategy Board Game</p>
+          <p className="mt-1 text-sm text-gray-400">Financial Strategy Card Game</p>
         </div>
 
         <div className="rounded-2xl border border-[#2A2A2A] p-8">
@@ -91,9 +91,9 @@ export function LoginScreen() {
               <span className="text-lg font-semibold text-white">{remembered}</span>
 
               <form onSubmit={handleSubmit} className="flex w-full flex-col items-center gap-4">
-                <PinInput value={pin} onChange={setPin} label="Enter your PIN" autoFocus accent="red" />
+                <PinInput value={pin} onChange={setPin} label="Enter your PIN" autoFocus />
                 {error && <p className="text-sm text-[#DC2626]">{error}</p>}
-                <Button type="submit" variant="red" motionless className="w-full" disabled={submitting} loading={submitting}>
+                <Button type="submit" className="w-full" disabled={submitting} loading={submitting}>
                   Sign In
                 </Button>
                 <button type="button" onClick={handleSwitchAccount} className="text-sm text-gray-400 hover:text-gray-200">
@@ -109,12 +109,12 @@ export function LoginScreen() {
                 value={username}
                 maxLength={10}
                 autoFocus
-                accent="red"
+               
                 onChange={(e) => setUsername(e.target.value.replace(/[^A-Za-z0-9_]/g, ''))}
               />
-              <PinInput value={pin} onChange={setPin} label="4-Digit PIN" accent="red" />
+              <PinInput value={pin} onChange={setPin} label="4-Digit PIN" />
               {error && <p className="text-sm text-[#DC2626]">{error}</p>}
-              <Button type="submit" variant="red" motionless className="w-full" disabled={submitting} loading={submitting}>
+              <Button type="submit" className="w-full" disabled={submitting} loading={submitting}>
                 Sign In
               </Button>
               <p className="text-center text-xs text-gray-400">

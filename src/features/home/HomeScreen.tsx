@@ -1,8 +1,7 @@
 import { useState } from 'react'
-import { motion } from 'framer-motion'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Avatar } from '@/components/ui/Avatar'
-import { GlassCard } from '@/components/ui/GlassCard'
+import { Panel } from '@/components/ui/Panel'
 import { Button } from '@/components/ui/Button'
 import { useAuthStore } from '@/stores/authStore'
 import { CreateRoomModal } from '@/features/room/CreateRoomModal'
@@ -24,71 +23,59 @@ export function HomeScreen() {
   const notice = (location.state as { notice?: string } | null)?.notice
 
   const tiles: Tile[] = [
-    { label: 'Create Room', description: 'Host a new game', icon: '➕', onClick: () => setCreateOpen(true) },
-    { label: 'Join Room', description: 'Enter a room code', icon: '🔑', onClick: () => setJoinOpen(true) },
-    { label: 'Profile', description: 'Your stats & avatar', icon: '👤', onClick: () => navigate('/profile') },
-    { label: 'Leaderboard', description: 'Top investors', icon: '🏆', onClick: () => navigate('/leaderboard') },
-    { label: 'Settings', description: 'Preferences', icon: '⚙️', onClick: () => navigate('/settings') },
+    { label: 'Create Room', description: 'Host a new game', icon: '+', onClick: () => setCreateOpen(true) },
+    { label: 'Join Room', description: 'Enter a room code', icon: '#', onClick: () => setJoinOpen(true) },
+    { label: 'Profile', description: 'Your stats & avatar', icon: '@', onClick: () => navigate('/profile') },
+    { label: 'Leaderboard', description: 'Top investors', icon: '*', onClick: () => navigate('/leaderboard') },
+    { label: 'Settings', description: 'Preferences', icon: '=', onClick: () => navigate('/settings') },
   ]
 
   return (
     <div className="mx-auto flex min-h-screen max-w-4xl flex-col gap-8 px-4 py-10">
       <header className="flex items-center justify-between">
         <div>
-          <h1 className="font-display text-2xl font-bold text-surface-50">Net Worth</h1>
-          <p className="text-sm text-surface-400">Build your empire. Outgrow the rest.</p>
+          <h1 className="text-2xl font-bold text-[color:var(--color-text)]">Net Worth</h1>
+          <p className="text-sm text-[color:var(--color-text-muted)]">Build your empire. Outgrow the rest.</p>
         </div>
         {profile && (
           <button
             type="button"
             onClick={() => navigate('/profile')}
-            className="flex items-center gap-3 rounded-full pl-3 pr-1 py-1 transition-colors hover:bg-white/[0.05]"
+            className="flex items-center gap-3 rounded-full py-1 pl-3 pr-1 hover:bg-[color:var(--color-surface)]"
           >
-            <span className="text-sm font-medium text-surface-200">{profile.username}</span>
+            <span className="text-sm font-medium text-[color:var(--color-text)]">{profile.username}</span>
             <Avatar name={profile.username} imageUrl={profile.avatar_url} />
           </button>
         )}
       </header>
 
       {notice && (
-        <div className="rounded-xl border border-gold-glow/30 bg-gold-glow/10 px-4 py-3 text-sm text-gold-glow">
+        <div className="rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-surface)] px-4 py-3 text-sm text-[color:var(--color-text-muted)]">
           {notice}
         </div>
       )}
 
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-        <GlassCard className="relative overflow-hidden p-8 text-center" solid>
-          <div className="absolute inset-0 bg-gradient-to-br from-emerald-glow/10 via-transparent to-violet-glow/10" />
-          <div className="relative flex flex-col items-center gap-4">
-            <h2 className="font-display text-xl font-semibold text-surface-50">Ready to play?</h2>
-            <p className="max-w-sm text-sm text-surface-400">
-              Jump into a public game right now, or set up your own room.
-            </p>
-            <Button size="lg" onClick={() => navigate('/play')}>
-              Play Now
-            </Button>
-          </div>
-        </GlassCard>
-      </motion.div>
+      <Panel className="p-8 text-center" solid>
+        <div className="flex flex-col items-center gap-4">
+          <h2 className="text-xl font-semibold text-[color:var(--color-text)]">Ready to play?</h2>
+          <p className="max-w-sm text-sm text-[color:var(--color-text-muted)]">
+            Jump into a public game right now, or set up your own room.
+          </p>
+          <Button size="lg" onClick={() => navigate('/play')}>
+            Play Now
+          </Button>
+        </div>
+      </Panel>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-        {tiles.map((tile, i) => (
-          <motion.button
-            key={tile.label}
-            type="button"
-            onClick={tile.onClick}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, delay: 0.05 * i }}
-            whileHover={{ y: -2 }}
-            className="text-left"
-          >
-            <GlassCard className="flex h-full flex-col gap-2 p-5 transition-colors hover:bg-white/[0.06]">
-              <span className="text-2xl">{tile.icon}</span>
-              <span className="font-medium text-surface-50">{tile.label}</span>
-              <span className="text-xs text-surface-400">{tile.description}</span>
-            </GlassCard>
-          </motion.button>
+        {tiles.map((tile) => (
+          <button key={tile.label} type="button" onClick={tile.onClick} className="text-left">
+            <Panel className="flex h-full flex-col gap-2 p-5 hover:bg-[color:var(--color-surface-alt)]">
+              <span className="text-2xl text-[color:var(--color-red)]">{tile.icon}</span>
+              <span className="font-medium text-[color:var(--color-text)]">{tile.label}</span>
+              <span className="text-xs text-[color:var(--color-text-muted)]">{tile.description}</span>
+            </Panel>
+          </button>
         ))}
       </div>
 

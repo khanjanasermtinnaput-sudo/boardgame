@@ -1,5 +1,5 @@
 import { Suspense, lazy } from 'react'
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { HashRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { useAuthBootstrap } from '@/features/auth/useAuthBootstrap'
 import { useAuthStore } from '@/stores/authStore'
 import { LoginScreen } from '@/features/auth/LoginScreen'
@@ -17,10 +17,7 @@ const GameScreen = lazy(() => import('@/features/game/GameScreen').then((m) => (
 function LoadingSplash() {
   return (
     <div className="flex min-h-screen items-center justify-center">
-      <div className="flex flex-col items-center gap-4">
-        <div className="h-10 w-10 animate-spin rounded-full border-2 border-emerald-glow border-t-transparent" />
-        <p className="text-sm text-surface-400">Loading Net Worth…</p>
-      </div>
+      <p className="text-sm text-[color:var(--color-text-muted)]">Loading Net Worth…</p>
     </div>
   )
 }
@@ -36,7 +33,7 @@ function App() {
   useAuthBootstrap()
 
   return (
-    <BrowserRouter>
+    <HashRouter>
       <RequireAuth>
         <Suspense fallback={<LoadingSplash />}>
           <Routes>
@@ -52,7 +49,7 @@ function App() {
           </Routes>
         </Suspense>
       </RequireAuth>
-    </BrowserRouter>
+    </HashRouter>
   )
 }
 

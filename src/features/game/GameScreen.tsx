@@ -1,212 +1,143 @@
-import { useEffect, useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useMemo, useState } from 'react'
+import { useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
-import { Board } from '@/components/game/Board'
-import { Dice3D } from '@/components/game/Dice3D'
-import { MarketTicker } from '@/components/game/MarketTicker'
 import { PlayerDashboard } from '@/components/game/PlayerDashboard'
-import { EventCardModal } from '@/components/game/EventCardModal'
-import { AuctionBanner } from '@/components/game/AuctionBanner'
-import { GameLog } from '@/components/game/GameLog'
+import { HandStrip } from '@/components/game/HandStrip'
+import { PhaseCenterPanel } from '@/components/game/PhaseCenterPanel'
 import { ChatPanel } from '@/components/game/ChatPanel'
-import { ActionDrawer } from '@/features/game/ActionDrawer'
+import { InvestmentPanel } from '@/features/game/panels/InvestmentPanel'
 import { EndGameScreen } from '@/features/endgame/EndGameScreen'
 import { useAuthStore } from '@/stores/authStore'
 import { useRoomStore } from '@/stores/roomStore'
 import { useGameStore } from '@/stores/gameStore'
 import { useRealtimeRoom } from '@/hooks/useRealtimeRoom'
-import { useGameSync } from '@/hooks/useGameSync'
-import { useHostGameLoop } from '@/hooks/useHostGameLoop'
-import { dispatchGameAction } from '@/net/actions'
-import { EVENT_CARDS_BY_ID } from '@/content/events'
-import type { GameAction } from '@/engine/actions'
+import { useGameState, phaseName } from '@/hooks/useGameState'
+import { gameErrorMessage, setGameReady } from '@/lib/game'
+import type { AssetInstance, DebtCard, GlobalEventState, HandCard, IncomeSummary, MarketMultipliers, PersonalEventState } from '@/engine/types'
 
 export function GameScreen() {
   const { roomId } = useParams<{ roomId: string }>()
-  const navigate = useNavigate()
   const profile = useAuthStore((s) => s.profile)
   const room = useRoomStore((s) => s.room)
-  const gameId = useGameStore((s) => s.gameId)
-  const state = useGameStore((s) => s.state)
-  const gameSyncStatus = useGameStore((s) => s.status)
-
-  const [rolling, setRolling] = useState(false)
-  const [actionError, setActionError] = useState<string | null>(null)
-  const [showLog, setShowLog] = useState(false)
-  const [showChat, setShowChat] = useState(false)
-  const lastRollRef = useRef<string>('')
+  const { game, players } = useGameStore()
+  const history = useGameStore((s) => s.history)
+  const [chatOpen, setChatOpen] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const [readyError, setReadyError] = useState<string | null>(null)
+  const [togglingReady, setTogglingReady] = useState(false)
 
   useRealtimeRoom(roomId, profile?.id)
-  useGameSync(roomId)
+  useGameState(roomId, profile?.id)
 
-  const isHost = room?.host_id === profile?.id
-  useHostGameLoop(roomId, gameId, isHost)
+  const playerList = useMemo(() => Object.values(players).sort((a, b) => a.seat - b.seat), [players])
+  const readyCount = playerList.filter((p) => p.ready).length
+  const self = profile ? players[profile.id] : undefined
 
-  useEffect(() => {
-    const signature = state?.lastRoll ? state.lastRoll.join(',') + state.turnNumber : ''
-    if (signature !== lastRollRef.current) {
-      lastRollRef.current = signature
-      setRolling(false)
+  async function handleToggleReady() {
+    if (!game || !self) return
+    setTogglingReady(true)
+    setReadyError(null)
+    try {
+      await setGameReady(game.id, !self.ready)
+    } catch (err) {
+      setReadyError(gameErrorMessage(err))
+    } finally {
+      setTogglingReady(false)
     }
-  }, [state?.lastRoll, state?.turnNumber])
-
-  useEffect(() => {
-    if (gameSyncStatus === 'not_found' && roomId) {
-      navigate(`/room/${roomId}/lobby`, { replace: true })
-    }
-  }, [gameSyncStatus, roomId, navigate])
-
-  if (!roomId || !profile) return null
-
-  if (gameSyncStatus === 'error') {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-3">
-        <p className="text-sm text-rose-glow">Couldn't load this game. Check your connection and try again.</p>
-        <Button variant="secondary" onClick={() => navigate('/home')}>
-          Back to Home
-        </Button>
-      </div>
-    )
   }
 
-  if (!state || !gameId) {
+  if (!roomId) return null
+
+  if (!game || !self || playerList.length === 0) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <p className="text-sm text-surface-400">Loading game…</p>
+        <p className="text-sm text-[color:var(--color-text-muted)]">Loading game…</p>
       </div>
     )
   }
 
-  if (state.phase === 'ended') {
-    return <EndGameScreen state={state} roomId={roomId} selfProfileId={profile.id} />
+  if (game.status === 'finished') {
+    return <EndGameScreen roomId={roomId} />
   }
 
-  const currentPlayer = state.players[state.turnIndex]
-  const isMyTurn = currentPlayer?.id === profile.id
-  const selfPlayerState = state.players.find((p) => p.id === profile.id)
-  const pendingCard = state.pendingEventCardId ? EVENT_CARDS_BY_ID.get(state.pendingEventCardId) : undefined
-
-  async function dispatch(action: GameAction) {
-    if (!roomId || !gameId || !profile) return
-    setActionError(null)
-    try {
-      const result = await dispatchGameAction({ roomId, gameId, profileId: profile.id, isHost }, action)
-      if (!result.ok) setActionError(result.error ?? 'Action failed.')
-    } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'Action failed.')
-    }
-  }
-
-  async function handleRoll() {
-    setRolling(true)
-    try {
-      await dispatch({ type: 'ROLL_DICE' })
-    } finally {
-      // The lastRoll effect above clears this on success; this covers the
-      // failure path so the button never gets stuck disabled forever.
-      setRolling(false)
-    }
-  }
+  const hand = self.hand as unknown as HandCard[]
+  const assets = self.assets as unknown as AssetInstance[]
+  const debts = self.debts as unknown as DebtCard[]
+  const market = game.market as unknown as MarketMultipliers
+  const globalEvent = 'id' in (game.global_event as object) ? (game.global_event as unknown as GlobalEventState) : null
+  const personalEvent = 'id' in (self.personal_event as object) ? (self.personal_event as unknown as PersonalEventState) : null
+  const incomeSummary =
+    'net_change' in (self.income_summary as object) ? (self.income_summary as unknown as IncomeSummary) : null
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-6xl flex-col gap-4 px-4 py-6">
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="font-display text-xl font-bold text-surface-50">{room?.name ?? 'Net Worth'}</h1>
-          <p className="text-xs text-surface-400">
-            Round {state.round} · Turn {state.turnNumber + 1} ·{' '}
-            {isMyTurn ? 'Your turn' : `${currentPlayer?.name ?? 'Someone'}'s turn`}
-          </p>
+    <div className="mx-auto flex min-h-screen max-w-5xl flex-col gap-6 px-4 py-6">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--color-border)] pb-4">
+        <div className="flex items-center gap-4">
+          <div>
+            <p className="text-xs uppercase tracking-wide text-[color:var(--color-text-faint)]">Age</p>
+            <p className="text-lg font-bold text-[color:var(--color-text)]">{game.age}</p>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-wide text-[color:var(--color-text-faint)]">Phase</p>
+            <p className="text-lg font-bold text-[color:var(--color-text)]">{phaseName(game.phase)}</p>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-wide text-[color:var(--color-text-faint)]">Ready</p>
+            <p className="text-lg font-bold text-[color:var(--color-text)]">
+              {readyCount}/{playerList.length}
+            </p>
+          </div>
+          {room && !room.is_public && (
+            <div>
+              <p className="text-xs uppercase tracking-wide text-[color:var(--color-text-faint)]">Room Code</p>
+              <p className="text-lg font-bold text-[color:var(--color-text)]">{room.code}</p>
+            </div>
+          )}
         </div>
         <div className="flex gap-2">
-          <Button size="sm" variant="secondary" onClick={() => setShowLog(true)}>
+          <Button size="sm" variant="secondary" onClick={() => setHistoryOpen(true)}>
             History
           </Button>
-          <Button size="sm" variant="secondary" onClick={() => setShowChat(true)}>
+          <Button size="sm" variant="secondary" onClick={() => setChatOpen(true)}>
             Chat
           </Button>
         </div>
       </header>
 
-      <MarketTicker market={state.market} />
+      <PhaseCenterPanel phase={game.phase} globalEvent={globalEvent} personalEvent={personalEvent} incomeSummary={incomeSummary} />
 
-      {state.pendingAuction && (
-        <AuctionBanner
-          offer={state.pendingAuction}
-          canAct={isMyTurn}
-          onBuy={() => dispatch({ type: 'BUY_AUCTION_ITEM' })}
-        />
-      )}
+      <div className="flex flex-col gap-3">
+        <PlayerDashboard player={self} age={game.age} />
 
-      {actionError && <p className="text-sm text-rose-glow">{actionError}</p>}
+        {game.phase === 1 ? (
+          <InvestmentPanel gameId={game.id} hand={hand} assets={assets} debts={debts} cash={self.cash} market={market} />
+        ) : (
+          <HandStrip hand={hand} />
+        )}
 
-      <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
-        <div className="flex flex-col gap-4">
-          <Board
-            players={state.players}
-            currentTurnPlayerId={currentPlayer?.id}
-            centerContent={
-              <div className="flex flex-col items-center gap-3">
-                <div className="flex gap-3">
-                  <Dice3D value={state.lastRoll?.[0] ?? 1} rolling={rolling} />
-                  <Dice3D value={state.lastRoll?.[1] ?? 1} rolling={rolling} />
-                </div>
-                {isMyTurn && state.phase === 'rolling' && (
-                  <Button onClick={handleRoll} loading={rolling}>
-                    Roll Dice
-                  </Button>
-                )}
-                {isMyTurn && state.phase === 'action' && !state.pendingEventCardId && (
-                  <Button variant="secondary" onClick={() => dispatch({ type: 'END_TURN' })}>
-                    End Turn
-                  </Button>
-                )}
-                {!isMyTurn && (
-                  <p className="text-xs text-surface-400">Waiting for {currentPlayer?.name ?? 'player'}…</p>
-                )}
-              </div>
-            }
-          />
-
-          {isMyTurn && state.phase === 'action' && selfPlayerState && !state.pendingEventCardId && (
-            <ActionDrawer
-              player={selfPlayerState}
-              market={state.market}
-              round={state.round}
-              disabled={!isMyTurn}
-              onDispatch={dispatch}
-            />
-          )}
-        </div>
-
-        <div className="flex flex-col gap-3">
-          {state.players.map((p) => (
-            <PlayerDashboard
-              key={p.id}
-              player={p}
-              market={state.market}
-              round={state.round}
-              isCurrentTurn={p.id === currentPlayer?.id}
-              isSelf={p.id === profile.id}
-            />
-          ))}
-        </div>
+        {readyError && <p className="text-sm text-[color:var(--color-red)]">{readyError}</p>}
+        <Button className="self-end" variant={self.ready ? 'secondary' : 'primary'} onClick={handleToggleReady} loading={togglingReady}>
+          {self.ready ? 'Not Ready' : 'Ready'}
+        </Button>
       </div>
 
-      <Modal open={showLog} onClose={() => setShowLog(false)} title="Game History">
-        <div className="h-96">
-          <GameLog entries={state.log} />
-        </div>
+      <Modal open={chatOpen} onClose={() => setChatOpen(false)} title="Chat" maxWidthClassName="max-w-sm">
+        {profile && <div className="h-96">{roomId && <ChatPanel roomId={roomId} profileId={profile.id} />}</div>}
       </Modal>
 
-      <Modal open={showChat} onClose={() => setShowChat(false)} title="Chat">
-        <div className="h-96">
-          <ChatPanel roomId={roomId} profileId={profile.id} />
+      <Modal open={historyOpen} onClose={() => setHistoryOpen(false)} title="History" maxWidthClassName="max-w-md">
+        <div className="flex max-h-96 flex-col gap-3 overflow-y-auto">
+          {history.length === 0 && <p className="text-sm text-[color:var(--color-text-faint)]">Nothing has happened yet.</p>}
+          {[...history].reverse().map((h) => (
+            <div key={h.id} className="border-b border-[color:var(--color-border)] pb-2 last:border-b-0">
+              <p className="text-xs text-[color:var(--color-text-faint)]">Age {h.age}</p>
+              <p className="text-sm font-medium text-[color:var(--color-text)]">{h.title}</p>
+              <p className="text-xs text-[color:var(--color-text-muted)]">{h.description}</p>
+            </div>
+          ))}
         </div>
       </Modal>
-
-      <EventCardModal card={pendingCard ?? null} canAck={isMyTurn} onAck={() => dispatch({ type: 'ACK_EVENT_CARD' })} />
     </div>
   )
 }

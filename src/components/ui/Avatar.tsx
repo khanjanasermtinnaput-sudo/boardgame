@@ -21,23 +21,16 @@ function initials(name: string): string {
 }
 
 export function Avatar({ name, color = 'emerald', size = 'md', imageUrl }: AvatarProps) {
-  const ringColor = tokenColorHex(color)
+  const swatch = tokenColorHex(color)
 
   if (imageUrl) {
-    return (
-      <img
-        src={imageUrl}
-        alt={name}
-        className={clsx('rounded-full object-cover ring-2', sizeClasses[size])}
-        style={{ boxShadow: `0 0 0 2px ${ringColor}` }}
-      />
-    )
+    return <img src={imageUrl} alt={name} className={clsx('rounded-full object-cover', sizeClasses[size])} />
   }
 
   return (
     <div
-      className={clsx('flex items-center justify-center rounded-full font-semibold text-surface-950', sizeClasses[size])}
-      style={{ backgroundColor: ringColor }}
+      className={clsx('flex items-center justify-center rounded-full font-semibold text-black', sizeClasses[size])}
+      style={{ backgroundColor: swatch }}
       aria-label={name}
     >
       {initials(name)}

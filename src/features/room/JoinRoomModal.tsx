@@ -46,7 +46,7 @@ export function JoinRoomModal({ open, onClose }: JoinRoomModalProps) {
           inputMode="numeric"
           onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
         />
-        {error && <p className="text-sm text-rose-glow">{error}</p>}
+        {error && <p className="text-sm text-[color:var(--color-red)]">{error}</p>}
         <div className="mt-2 flex gap-3">
           <Button type="button" variant="secondary" className="flex-1" onClick={onClose}>
             Cancel

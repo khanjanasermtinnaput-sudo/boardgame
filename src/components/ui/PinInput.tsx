@@ -7,18 +7,11 @@ interface PinInputProps {
   label?: string
   autoFocus?: boolean
   disabled?: boolean
-  /** Focus accent color — defaults to the app's emerald; 'red' for flat/minimal surfaces like login. */
-  accent?: 'emerald' | 'red'
 }
 
 const LENGTH = 4
 
-const focusClasses: Record<'emerald' | 'red', string> = {
-  emerald: 'focus:border-emerald-glow/60',
-  red: 'focus:border-[#DC2626]',
-}
-
-export function PinInput({ value, onChange, label, autoFocus, disabled, accent = 'emerald' }: PinInputProps) {
+export function PinInput({ value, onChange, label, autoFocus, disabled }: PinInputProps) {
   const refs = useRef<Array<HTMLInputElement | null>>([])
   const digits = Array.from({ length: LENGTH }, (_, i) => value[i] ?? '')
 
@@ -50,7 +43,7 @@ export function PinInput({ value, onChange, label, autoFocus, disabled, accent =
 
   return (
     <div className="flex flex-col gap-1.5">
-      {label && <span className="text-sm font-medium text-surface-300">{label}</span>}
+      {label && <span className="text-sm font-medium text-[color:var(--color-text-muted)]">{label}</span>}
       <div className="flex gap-3" onPaste={handlePaste}>
         {digits.map((digit, i) => (
           <input
@@ -68,9 +61,9 @@ export function PinInput({ value, onChange, label, autoFocus, disabled, accent =
             onChange={(e) => setDigit(i, e.target.value)}
             onKeyDown={(e) => handleKeyDown(i, e)}
             className={clsx(
-              'h-14 w-12 rounded-xl bg-white/[0.05] border border-white/10 text-center text-2xl font-semibold text-surface-50',
-              'outline-none transition-colors focus:bg-white/[0.07]',
-              focusClasses[accent],
+              'h-14 w-12 rounded-md text-center text-2xl font-semibold',
+              'bg-[color:var(--color-surface)] border border-[color:var(--color-border)] text-[color:var(--color-text)]',
+              'outline-none focus:border-[color:var(--color-red)]',
             )}
           />
         ))}

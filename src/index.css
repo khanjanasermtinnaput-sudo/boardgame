@@ -1,35 +1,40 @@
 @import "tailwindcss";
 
-@custom-variant dark (&:where(.dark, .dark *));
-
 @theme {
-  --font-display: "Sora", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 
-  /* Surface scale — deep navy premium dark */
-  --color-surface-950: #05070d;
-  --color-surface-900: #0b1120;
-  --color-surface-800: #121a2e;
-  --color-surface-700: #1b2540;
-  --color-surface-600: #263356;
-  --color-surface-500: #34406b;
-  --color-surface-400: #576189;
-  --color-surface-300: #8892b5;
-  --color-surface-200: #c1c8e0;
-  --color-surface-100: #e6e9f5;
-  --color-surface-50: #f5f6fb;
+  /* Flat neutral scale — dark, minimal, no gradients */
+  --color-bg: #0f0f10;
+  --color-surface: #171717;
+  --color-surface-alt: #1f1f1f;
+  --color-border: #2a2a2a;
+  --color-text: #f5f5f5;
+  --color-text-muted: #9ca3af;
+  --color-text-faint: #6b7280;
 
-  /* Brand accents */
-  --color-emerald-glow: #10b981;
-  --color-gold-glow: #f59e0b;
-  --color-rose-glow: #f43f5e;
-  --color-sky-glow: #38bdf8;
-  --color-violet-glow: #a78bfa;
+  /* Single brand accent — red. Used for every primary/interactive element. */
+  --color-red: #dc2626;
+  --color-red-hover: #991b1b;
+  --color-red-soft: #7f1d1d;
 
-  --shadow-glass: 0 8px 32px 0 rgb(0 0 0 / 0.37);
-  --shadow-glow-emerald: 0 0 24px 0 rgb(16 185 129 / 0.35);
-  --shadow-glow-gold: 0 0 24px 0 rgb(245 158 11 / 0.35);
+  /* Semantic (financial) colors — flat, no glow, used only for +/- values */
+  --color-gain: #16a34a;
+  --color-loss: #dc2626;
+
+  /* Seat/avatar identification colors — flat swatches, purely for telling
+     players apart at a glance. Not part of the brand accent system. */
+  --color-seat-1: #10b981;
+  --color-seat-2: #f59e0b;
+  --color-seat-3: #38bdf8;
+  --color-seat-4: #f43f5e;
+  --color-seat-5: #a78bfa;
+  --color-seat-6: #fbbf24;
+  --color-seat-7: #22d3ee;
+  --color-seat-8: #e879f9;
+  --color-seat-9: #a3e635;
+  --color-seat-10: #fb923c;
 }
 
 @layer base {
@@ -37,34 +42,18 @@
     color-scheme: dark;
   }
   body {
-    @apply bg-surface-950 text-surface-100 font-sans antialiased m-0 min-h-screen;
-    background-image:
-      radial-gradient(ellipse 80% 50% at 20% -10%, rgb(16 185 129 / 0.12), transparent),
-      radial-gradient(ellipse 60% 40% at 90% 10%, rgb(167 139 250 / 0.10), transparent);
-    background-attachment: fixed;
+    @apply bg-[color:var(--color-bg)] text-[color:var(--color-text)] font-sans antialiased m-0 min-h-screen;
   }
   #root {
     min-height: 100svh;
   }
   ::selection {
-    background-color: rgb(16 185 129 / 0.3);
-    color: var(--color-surface-50);
+    background-color: rgb(220 38 38 / 0.35);
+    color: var(--color-text);
   }
   * {
-    scrollbar-color: var(--color-surface-600) transparent;
+    scrollbar-color: var(--color-border) transparent;
   }
-}
-
-@layer components {
-  .glass-panel {
-    @apply bg-white/[0.04] backdrop-blur-xl border border-white/[0.08] shadow-[var(--shadow-glass)];
-  }
-  .glass-panel-solid {
-    @apply bg-surface-900/90 backdrop-blur-xl border border-white/[0.08] shadow-[var(--shadow-glass)];
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;

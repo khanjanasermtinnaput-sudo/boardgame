@@ -1,105 +1,80 @@
 import { supabase } from './supabase'
 import type { Tables } from '@/types/database.types'
-import type { GameState } from '@/engine/types'
-import type { GameAction } from '@/engine/actions'
-import { buildFinalResults } from '@/engine/winConditions'
 
-export type GameRow = Tables<'games'>
-export type GameActionRow = Tables<'game_actions'>
-export type GameLogRow = Tables<'game_log'>
+export type Game = Tables<'games'>
+export type GamePlayer = Tables<'game_players'>
+export type GameResult = Tables<'game_results'>
 
-export async function startGame(roomId: string, initialState: GameState): Promise<GameRow> {
-  const { data, error } = await supabase.rpc('start_game', {
-    _room_id: roomId,
-    // The Supabase-generated Json type doesn't know our GameState shape,
-    // but it is plain JSON-serializable data.
-    _initial_state: initialState as unknown as GameRow['state'],
-  })
+const GAME_ERROR_MESSAGES: Record<string, string> = {
+  not_host_or_not_in_lobby: 'The game has already started.',
+  not_enough_players: 'You need at least 2 players to start.',
+  players_not_ready: 'Everyone needs to be ready before starting.',
+  not_authenticated: 'Your session expired — please refresh and try again.',
+  game_not_found: 'This game no longer exists.',
+  game_not_active: 'This game has already finished.',
+  not_in_game: "You're not part of this game.",
+  not_investment_phase: 'You can only do that during the Investment Phase.',
+  card_not_in_hand: "That card isn't in your hand.",
+  insufficient_funds: "You don't have enough cash for that.",
+  asset_not_owned: "You don't own that asset.",
+  debt_not_found: "That debt doesn't exist.",
+  invalid_amount: 'Enter a valid amount.',
+}
+
+export function gameErrorMessage(err: unknown): string {
+  const raw = err instanceof Error ? err.message : typeof err === 'string' ? err : ''
+  return GAME_ERROR_MESSAGES[raw] ?? (raw || 'Something went wrong. Please try again.')
+}
+
+export async function startGame(roomId: string): Promise<Game> {
+  const { data, error } = await supabase.rpc('game_start', { _room_id: roomId })
   if (error) throw error
   return data
 }
 
-export async function syncGameState(
-  roomId: string,
-  state: GameState,
-  turn: number,
-  round: number,
-  currentSeat: number,
-  market: GameState['market'],
-  processedActionRowId?: string,
-): Promise<void> {
-  // processedActionRowId marks the source game_actions row processed in the
-  // same transaction as this persist — see F5 in net/hostLoop.ts.
-  const { error } = await supabase.rpc('sync_game_state', {
-    _room_id: roomId,
-    _state: state as unknown as GameRow['state'],
-    _turn: turn,
-    _round: round,
-    _current_seat: currentSeat,
-    _market: market as unknown as GameRow['market'],
-    _processed_action_id: processedActionRowId ?? null,
-  })
-  if (error) throw error
-}
-
-export async function finishGame(roomId: string, finalState: GameState, processedActionRowId?: string): Promise<void> {
-  // final_results is host-computed (same trust level as the rest of the
-  // authoritative state) so that submit_game_result never has to trust an
-  // individual non-host player's self-reported win/net-worth claim.
-  const { error } = await supabase.rpc('finish_game', {
-    _room_id: roomId,
-    _final_state: finalState as unknown as GameRow['state'],
-    _final_results: buildFinalResults(finalState) as unknown as GameRow['final_results'],
-    _processed_action_id: processedActionRowId ?? null,
-  })
-  if (error) throw error
-}
-
-export async function submitGameResult(roomId: string): Promise<void> {
-  // Server reads the caller's own result from games.final_results (written
-  // by finish_game) rather than accepting a client-supplied net worth/win
-  // flag, and records it once per (room, profile) so repeat calls are no-ops.
-  const { error } = await supabase.rpc('submit_game_result', { _room_id: roomId })
-  if (error) throw error
-}
-
-export async function fetchGameByRoomId(roomId: string): Promise<GameRow | null> {
+export async function fetchGame(roomId: string): Promise<Game | null> {
   const { data, error } = await supabase.from('games').select('*').eq('room_id', roomId).maybeSingle()
   if (error) throw error
   return data
 }
 
-export async function submitGameAction(gameId: string, profileId: string, action: GameAction): Promise<void> {
-  const { error } = await supabase.from('game_actions').insert({
-    game_id: gameId,
-    profile_id: profileId,
-    type: action.type,
-    payload: action as unknown as GameActionRow['payload'],
-  })
-  if (error) throw error
-}
-
-export async function fetchUnprocessedActions(gameId: string): Promise<GameActionRow[]> {
-  const { data, error } = await supabase
-    .from('game_actions')
-    .select('*')
-    .eq('game_id', gameId)
-    .eq('processed', false)
-    .order('created_at', { ascending: true })
+export async function fetchGamePlayers(gameId: string): Promise<GamePlayer[]> {
+  const { data, error } = await supabase.from('game_players').select('*').eq('game_id', gameId).order('seat', { ascending: true })
   if (error) throw error
   return data
 }
 
-export async function markActionProcessed(actionId: string): Promise<void> {
-  const { error } = await supabase.from('game_actions').update({ processed: true }).eq('id', actionId)
+export async function setGameReady(gameId: string, ready: boolean): Promise<void> {
+  const { error } = await supabase.rpc('game_set_ready', { _game_id: gameId, _ready: ready })
   if (error) throw error
 }
 
-export async function appendGameLog(gameId: string, seq: number, entry: GameState['log'][number]): Promise<void> {
-  const { error } = await supabase.from('game_log').insert({
-    game_id: gameId,
-    seq,
-    entry: entry as unknown as GameLogRow['entry'],
-  })
+export async function buyCard(gameId: string, cardId: string): Promise<void> {
+  const { error } = await supabase.rpc('game_buy_card', { _game_id: gameId, _card_id: cardId })
   if (error) throw error
+}
+
+export async function sellAsset(gameId: string, instanceId: string): Promise<void> {
+  const { error } = await supabase.rpc('game_sell_asset', { _game_id: gameId, _instance_id: instanceId })
+  if (error) throw error
+}
+
+export async function borrow(gameId: string, amount: number): Promise<void> {
+  const { error } = await supabase.rpc('game_borrow', { _game_id: gameId, _amount: amount })
+  if (error) throw error
+}
+
+export async function repay(gameId: string, debtId: string, amount: number): Promise<void> {
+  const { error } = await supabase.rpc('game_repay', { _game_id: gameId, _debt_id: debtId, _amount: amount })
+  if (error) throw error
+}
+
+export async function fetchGameResults(roomId: string): Promise<GameResult[]> {
+  const { data, error } = await supabase
+    .from('game_results')
+    .select('*')
+    .eq('room_id', roomId)
+    .order('net_worth', { ascending: false })
+  if (error) throw error
+  return data
 }

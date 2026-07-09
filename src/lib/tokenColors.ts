@@ -1,5 +1,7 @@
 // Matches the seat-assignment palette used by the create_room/join_room
 // RPCs (supabase/migrations/0001_init.sql) — one color per seat, 10 total.
+// These are flat identification swatches only (tell players apart at a
+// glance), independent of the app's red brand accent.
 export const TOKEN_COLOR_HEX: Record<string, string> = {
   emerald: '#10b981',
   gold: '#f59e0b',
