@@ -8,6 +8,37 @@
     <meta name="color-scheme" content="dark light" />
     <meta name="theme-color" content="#0B1120" />
     <title>Net Worth</title>
+    <script>
+      // GitHub Pages caches index.html for ~10 minutes (no custom headers are
+      // possible there), but every deploy renames the hashed JS/CSS bundles.
+      // A browser that loads a stale cached index.html within that window
+      // requests asset filenames that no longer exist on the server (404),
+      // and the module script never runs — a black screen with no error UI,
+      // since React itself never got a chance to boot.
+      //
+      // Recover automatically: if the entry script or its stylesheet fails
+      // to load, do exactly one hard, cache-busting reload (guarded by
+      // sessionStorage so a real, persistent failure doesn't reload forever).
+      window.addEventListener(
+        'error',
+        function (event) {
+          var target = event.target
+          if (!target || (target.tagName !== 'SCRIPT' && target.tagName !== 'LINK')) return
+          var src = target.src || target.href || ''
+          if (src.indexOf('/assets/') === -1) return
+          if (sessionStorage.getItem('nw_stale_reload')) return
+          sessionStorage.setItem('nw_stale_reload', '1')
+          location.replace(location.pathname + '?nwreload=' + Date.now() + location.hash)
+        },
+        true,
+      )
+      // A load that completes without needing recovery clears the guard, so
+      // a later, separate incident in the same long-lived tab can still
+      // self-heal once (rather than the guard being spent permanently).
+      window.addEventListener('load', function () {
+        sessionStorage.removeItem('nw_stale_reload')
+      })
+    </script>
   </head>
   <body>
     <div id="root"></div>
