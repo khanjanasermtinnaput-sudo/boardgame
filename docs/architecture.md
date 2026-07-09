@@ -2,118 +2,107 @@
 
 ## Overview
 
-Net Worth is a client-heavy, host-authoritative multiplayer game. The
-backend (Supabase) provides authentication, storage, and a thin
-authorization/persistence layer; all game logic runs in the browser.
+Net Worth is a **server-authoritative** multiplayer game. There is no
+trusted client, and no single player's browser owns canonical game state
+— every mutation (buying a card, borrowing, marking ready, resolving a
+phase) is a Postgres `security definer` RPC that re-validates
+authorization and game/phase state itself before writing anything.
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│  Browser (host player)                                          │
-│                                                                   │
-│  engine/*  ──applyGameAction──▶  gameStore (Zustand)             │
-│     ▲                                  │                        │
-│     │                                  ▼                        │
-│  net/hostLoop.ts  ◀────────────  syncGameState (lib/game.ts)     │
-│     ▲                                  │                        │
-│     │ processes                        ▼                        │
-│  game_actions (Postgres, realtime)  games.state (Postgres)       │
-└─────────────────────────────────────────────────────────────────┘
-                    ▲                            │
-                    │ INSERT (intent)             │ UPDATE (realtime)
-                    │                             ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  Browser (non-host player)                                       │
-│                                                                    │
-│  UI ──dispatchGameAction──▶ submitGameAction (lib/game.ts)         │
-│                                                                    │
-│  useGameSync ◀── games table UPDATE ── renders synced GameState   │
-└─────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────┐
+│  Any player's browser                                              │
+│                                                                     │
+│  UI ──calls──▶ lib/game.ts (RPC wrappers: game_buy_card,            │
+│                game_borrow, game_set_ready, ...)                    │
+│                          │                                          │
+│                          ▼                                          │
+│              Supabase Postgres RPC (security definer)               │
+│              — re-checks auth.uid(), phase, ownership                │
+│              — mutates games / game_players directly                 │
+└────────────────────────────────────────────────────────────────────┘
+                          │
+                          ▼ realtime UPDATE broadcast
+┌────────────────────────────────────────────────────────────────────┐
+│  Every player's browser (including the actor's)                    │
+│  useGameState ◀── games + game_players table UPDATEs                │
+│  renders whatever state it receives — no client-side reducer         │
+└────────────────────────────────────────────────────────────────────┘
 ```
 
-## Why host-authoritative
+## Why server-authoritative (not host-authoritative)
 
-Running the full game engine identically on every client (lockstep
-simulation) would require deterministic RNG seeding across clients and
-careful reconciliation on reconnect. Instead, exactly one browser — the
-room's host — owns the canonical `GameState` and is the only writer to the
-`games` table. This is simpler, has lower latency for the host, and makes
-reconnect trivial (a rejoining client just re-fetches `games.state`).
+An earlier design let one browser (the room's "host") own the canonical
+game state and be the sole writer, with every other player submitting
+"intent" rows for the host to apply. That's simpler to build, but it
+means a malicious or crashed host can corrupt the game or stall it, and
+every mutation needs a full round trip through the host's browser even
+when it only affects one player's own row.
 
-**Trade-off:** the host's client is trusted. A malicious host could tamper
-with their local state before it syncs. This is acceptable for a casual,
-invite-based game between friends; it is not intended to resist a
-adversarial host. If that's ever required, the fix is to move `engine/*`
-into a Supabase Edge Function and validate every action server-side before
-persisting — the pure, dependency-free design of `src/engine` makes that a
-drop-in change (it doesn't import React or Supabase).
+Since this game's phases are simultaneous (every player acts independently
+during the Investment Phase, then everyone just presses Ready), there's no
+natural "whoever's turn it is" host role to lean on anyway. Instead:
+
+- Each player's own actions (buy/sell/borrow/repay) mutate only *their own*
+  `game_players` row, validated by an RPC that re-checks the game is in
+  Phase 1 — no host involved at all.
+- Phase resolution (rolling the Global Event, dealing Personal Events,
+  computing Income & Expense, refilling hands, advancing the age) is
+  resolved by **whichever player's `game_set_ready` call happens to set
+  the last ready flag** — see `docs/schema.md` for exactly how the row
+  lock on `games` makes this safe under concurrent ready-presses.
+
+This removes the "host is trusted" trade-off entirely: every player's
+client is equally (un)trusted, and the database is the only source of
+truth.
 
 ## Layers
 
-- **`src/engine/`** — pure game logic. No I/O, no React, no Supabase.
-  `applyGameAction(state, actorId, action)` is the single entry point; every
-  mutation is turn-gated (rejects any actor that isn't the current player).
-  Fully unit-tested (see `src/engine/__tests__`).
-- **`src/content/`** — static game data (board layout, investment/business/
-  property catalogs, market regimes, the 212 event cards). Pure data, no
-  logic.
+- **`src/content/`** — static game data: the investment card catalog,
+  global/personal event catalogs (mirrors of what's seeded server-side in
+  `card_catalog`/`global_event_catalog`/`personal_event_catalog`, used for
+  client-side display only — pricing and effects are always re-validated
+  server-side).
 - **`src/lib/`** — thin wrappers around the Supabase client: auth, room
-  RPCs, game persistence, profile lookups. Nothing here holds state.
-- **`src/net/`** — bridges the pure engine to the persistence layer.
-  `hostLoop.ts` applies an action to the in-memory `gameStore` and persists
-  the result; `actions.ts` decides whether the current client should apply
-  locally (host) or submit an intent row (non-host).
-- **`src/stores/`** — Zustand stores (`authStore`, `roomStore`, `gameStore`).
-  Thin, no business logic.
+  RPCs, game RPCs, profile lookups. Nothing here holds state.
+- **`src/stores/`** — Zustand stores (`authStore`, `roomStore`,
+  `gameStore`). Thin, no business logic — they hold whatever the last
+  realtime payload said.
 - **`src/hooks/`** — React bindings to Supabase Realtime: `useRealtimeRoom`
-  (room/players/chat + presence), `useGameSync` (games table → gameStore),
-  `useHostGameLoop` (host-only: drains `game_actions` into the reducer).
-- **`src/components/`** — reusable UI: design-system primitives
-  (`components/ui`) and game-board rendering (`components/game`).
+  (room/players/chat + presence), `useGameState` (`games` +
+  `game_players` → gameStore).
+- **`src/components/`** — reusable UI primitives (`components/ui`) and
+  game-specific display components (`components/game`).
 - **`src/features/`** — screen-level composition (auth, home, room/lobby,
   game, endgame, profile, leaderboard, settings).
 
 ## Multiplayer sync in detail
 
-1. The host's browser holds the only writable copy of `GameState` (in
-   `gameStore`). Every action it takes calls `hostApplyAction`, which runs
-   the reducer, updates `gameStore` synchronously, and persists to
-   `games.state` via the `sync_game_state` Postgres RPC (or `finish_game`
-   once the game ends).
-2. Non-host players call `dispatchGameAction`, which inserts a row into
-   `game_actions` (their "intent"). RLS lets a player insert only their own
-   actions in rooms they belong to.
-3. The host subscribes to `game_actions` INSERTs (`useHostGameLoop`) and
-   processes them **in order** through a promise queue, applying each via
-   the same reducer, so ordering matches submission order regardless of who
-   submitted it. The reducer's turn-gating means an action from a player
-   who isn't currently "up" is simply rejected — no special handling needed.
-4. Every client (host included) subscribes to `games` table UPDATEs
-   (`useGameSync`) and renders whatever `state` it receives. For the host
-   this is a no-op echo of what it already wrote; for everyone else it's
-   the only way they see the game advance.
-5. Room membership, readiness, chat, and live presence (`useRealtimeRoom`)
-   are a separate, simpler realtime channel — presence is used purely for
-   the lobby/game's "reconnecting…" indicator, independent of the `games`
-   sync above.
+1. A player takes an action (buy a card, borrow, mark ready). The client
+   calls the corresponding RPC directly — there is no local reducer and no
+   optimistic local mutation of authoritative state.
+2. The RPC validates `auth.uid()`, room/game membership, and phase, then
+   mutates `games` and/or the caller's own `game_players` row in Postgres.
+3. Every client (including the actor's) is subscribed to `games` and
+   `game_players` table `UPDATE`s via Realtime (`useGameState`). When the
+   RPC's transaction commits, every subscriber receives the new row(s) and
+   re-renders — the acting client learns of its own action's result the
+   same way everyone else does.
+4. Room membership, readiness-in-the-lobby, chat, and live presence
+   (`useRealtimeRoom`) are a separate, simpler realtime channel used purely
+   for the lobby/game's "reconnecting…" indicator, independent of the
+   `games`/`game_players` sync above.
+5. Reconnect is trivial: a rejoining client just re-fetches the current
+   `games` + `game_players` rows for its game — there is no missed-action
+   replay to reason about, because there's no per-client action log to
+   replay in the first place; the database row *is* the state.
 
 ## Database access model
 
 All game-state mutation happens through **security-definer Postgres RPCs**
-(`create_room`, `join_room`, `kick_player`, `transfer_host`, `start_game`,
-`sync_game_state`, `finish_game`, `submit_game_result`, `leave_room`) rather
-than raw table writes. Each RPC re-validates authorization internally
-(`auth.uid()` checks), so exposing them as public endpoints is intentional
-and safe — see `docs/schema.md` for the full RLS model.
-
-## Known simplifications
-
-- The host is trusted (see trade-off above).
-- Reconnect works by re-fetching current state on mount; there's no replay
-  of missed actions beyond what's already reflected in `games.state` and
-  `state.log`.
-- If the host disconnects mid-game, the room has no automatic host-failover
-  for an *in-progress* game (host migration is implemented for the lobby via
-  `leave_room`'s reassignment logic, but a game already in progress has no
-  "promote a new host" path yet — the safest extension point is
-  `finish_game`/`sync_game_state`'s authorization check, which would need to
-  accept a newly-promoted host).
+(`create_room`, `join_room`, `kick_player`, `transfer_host`, `game_start`,
+`game_buy_card`, `game_sell_asset`, `game_borrow`, `game_repay`,
+`game_set_ready`) rather than raw table writes. Each RPC re-validates
+authorization internally (`auth.uid()` checks, phase checks), so exposing
+them as public endpoints is intentional and safe — see `docs/schema.md`
+for the full RLS model and the concurrency guarantee `game_set_ready`
+provides.

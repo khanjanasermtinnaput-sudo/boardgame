@@ -1,120 +1,101 @@
 # Game Rules — Net Worth
 
-An original financial strategy board game for 2–10 players. Grow your
-**Net Worth** — Cash + Assets − Liabilities — higher than everyone else.
+An original financial strategy card game for 2–10 players. There is no
+board and no dice — every player plays the same round simultaneously, and
+the game is won by the highest **Net Worth** at the end.
 
-## Setup
+## Objective
 
-Every player starts with:
-- **$5,000** cash
-- **$900** salary (collected every lap around the board)
-- **$500** baseline living expenses (deducted every lap)
+Every player starts at **Age 20** with $10,000 cash and a $2,000/round
+salary. The game plays through ages **20 → 30 → 40 → 50 → 60 → 70** — six
+rounds total, one age per round — and ends immediately after the Age 70
+round resolves. Whoever has the highest **Net Worth** wins.
 
-The host picks a **win condition** when creating the room:
-- **Target** — first player to reach a chosen net worth wins immediately.
-- **Rounds** — after a set number of rounds, whoever has the highest net
-  worth wins.
-- **Survival** — play until only one player isn't bankrupt.
+**Net Worth = Cash + Σ Base Value of every owned asset − Σ Outstanding
+debt.**
 
-## Turn structure
+## Round structure
 
-1. **Roll** — roll two six-sided dice (rendered as animated 3D dice) and
-   move that many spaces clockwise around the 40-space board.
-2. **Passing Payday** — every time you pass or land on Payday Plaza (space
-   0), you settle a full lap: collect your total passive income (salary +
-   dividends + business income + rental income) and pay your total expenses
-   (living expenses + maintenance + loan interest + insurance premium) in
-   one net adjustment to your cash.
-3. **Resolve the space you land on** (see Board Spaces below) — this
-   happens automatically.
-4. **Free actions** — buy or sell investments, buy/upgrade/sell businesses,
-   buy/sell real estate, take or repay a loan, buy or cancel insurance, or
-   pay for education. You may take as many of these as you want and can
-   afford, in any order, before ending your turn.
-5. **End Turn** — passes to the next player. Rolling doubles grants an
-   extra roll (capped at 3 in a row, to keep things moving).
+Each age is one round made of five phases, resolved in order. Every phase
+requires **every player to press Ready** before the round can move on —
+there is no turn order and no waiting on one player at a time.
 
-## Board spaces
+1. **Investment Phase** — buy asset cards from your own hand, borrow
+   money, repay debt, review your portfolio. This is the only phase where
+   you can act; the rest resolve automatically once everyone is ready.
+2. **Global Event** — one event is rolled and applied to **everyone**:
+   50% Positive Market, 30% Economic Slowdown, 20% Black Event. It shifts
+   the *market price* multiplier for one or more asset categories.
+3. **Personal Event** — every player draws their own event card (no two
+   players get the same one in the same round) — a bonus, an expense, an
+   opportunity, and so on — applied immediately.
+4. **Income & Expense** — salary, passive income (rent/dividends/business
+   income from your assets), living cost, maintenance, tax, and loan
+   interest are all totaled automatically and applied to your cash.
+5. **Refill Investment Cards** — your hand is topped back up to 6 cards.
 
-| Space | Effect |
+After phase 5, the age advances (or, at age 70, the game ends).
+
+## Investment cards
+
+You always hold up to **6 cards** in hand, refilled to 6 at the end of
+every round. Cards you've already drawn won't repeat until your personal
+deck is fully exhausted — only then does it reshuffle.
+
+Ten categories: **House, Business, Growth Stock, Dividend Stock, Gold,
+Car, Land, Commercial Building, Crypto, Special Asset.** Every card has a
+name, category, purchase price, base value, passive income, and
+description.
+
+- **Base Value** is fixed the moment the card is printed. It never
+  changes, and it's the only asset figure that counts toward Net Worth.
+- **Market Price** is what you actually pay or receive when buying or
+  selling — it moves with Global Events (via a per-category multiplier)
+  and has no effect on Net Worth.
+
+Passive income varies by category: rental/dividend/business-heavy cards
+(House, Business, Dividend Stock, Commercial Building) pay steadily every
+round; speculative or store-of-value cards (Growth Stock, Gold, Car,
+Crypto, Land) mostly pay nothing and rely on market appreciation instead.
+
+## Loans & interest
+
+Borrowing any amount creates a **debt card** (principal, loan type,
+outstanding balance). You may repay any debt, in any amount up to what's
+outstanding, during the Investment Phase.
+
+Interest is charged on every outstanding debt each round, scaled by **how
+many debt cards you're carrying** — more simultaneous loans cost
+proportionally more:
+
+| Debt cards | Interest rate |
 | --- | --- |
-| 💰 Payday | Lap settlement happens automatically when you pass/land here |
-| 💵 Salary (Bonus Payday) | Collect an extra salary-sized bonus |
-| 📈 Investment | Marketplace for stocks & bonds |
-| 🏪 Business | Marketplace to buy/upgrade/sell businesses |
-| 🏠 Real Estate | Marketplace to buy/sell property |
-| 🔔 Market | Forces an immediate market shift |
-| 🧾 Tax | Pay 20% of your current income in tax |
-| 🎴 Event | Draw one of 212 original event cards |
-| 🏦 Loan | Marketplace for loans (also available as a free action anywhere) |
-| 🔨 Auction | A random business or property is offered at 25% off, this turn only |
-| 🛡️ Insurance | Buy insurance — covers 50% of negative event losses |
-| 🎓 Education | One-time investment that permanently raises your salary |
-| ⚠️ Economic Crisis | Forces a bad market regime and costs every player ~3% of net worth |
-| 🎁 Bonus | Instant cash bonus |
-| ❤️ Charity | Automatic small donation (a fixed percentage of your net worth) |
-| 🏖️ Vacation | Skip your next turn |
-| 🎲 Random | An instant wildcard swing — cash or a percentage of net worth, positive or negative |
+| 1 | 5% |
+| 2 | 10% |
+| 3 | 20% |
+| 4 | 30% |
+| 5 | 40% |
+| 6 | 50% |
+| 7+ | +5% per additional card |
 
-## Investments
+Interest compounds onto the debt itself if left unpaid — it is not
+deducted from cash directly.
 
-Four categories, each with real stocks and bonds:
+## Income & Expense, in full
 
-- **Growth** — high risk, high expected return, no dividend.
-- **Dividend** — steady income, low volatility, mixes stocks and municipal
-  bonds.
-- **Value** — undervalued, moderate return, low-moderate volatility.
-- **High Risk** — speculative, very volatile, highest expected return.
+Each round automatically settles, in this order:
 
-Every instrument has a buy price, current market value, risk score,
-expected return, and dividend yield. Prices move with the market regime and
-random shocks every few rounds.
+- **Income** = salary + passive income (sum of every owned asset's
+  passive income).
+- **Tax** = 15% of gross income.
+- **Maintenance** = 2% of the total base value of everything you own.
+- **Living cost** = a baseline that rises with age.
+- **Net change** = income − tax − maintenance − living cost, applied to
+  cash.
+- **Loan interest** accrues onto outstanding debt per the table above.
 
-## Businesses
+## End of game
 
-Cafe, Restaurant, Software Company, Solar Farm, Factory, Retail Store,
-Warehouse, Hotel. Each has a purchase price, base income, maintenance cost,
-and up to 3 upgrade levels (each raising both income and maintenance). You
-can own each business type once; sell for 85% of current value (purchase
-price + upgrade investment).
-
-## Real estate
-
-House, Condo, Apartment, Office, Commercial Building, Land. Each has a
-purchase price, rental income, maintenance cost, and its own appreciation
-rate — properties held longer, and held during bull markets, are worth
-more. You can own multiple of the same type. Sell for 92% of current
-market value.
-
-## The market
-
-Every 3 rounds (or instantly when triggered by an Economic Crisis or
-certain event cards), the market shifts into a new regime: **Bull Market,
-Bear Market, Inflation, Recession, Interest Rate Hike, Technology Boom,
-Energy Crisis,** or **Market Crash.** Each regime applies different
-multipliers to each investment category, to property values, to business
-income, and to the base interest rate — so the "right" portfolio changes
-over the course of a game.
-
-## Loans & insurance
-
-Loans are interest-only: borrow any amount (up to a credit limit), pay
-interest each lap, and repay principal whenever you like. Insurance costs a
-flat premium per lap and cuts the cash impact of any negative event or
-space effect in half.
-
-## Event cards
-
-212 original cards across nine categories — Positive, Negative, Neutral,
-Economic, Business, Family, Health, Investment, and Tax — covering
-everything from a signing bonus to a market crash to an unexpected tax
-audit. Landing on an Event space draws one at random and applies its effect
-immediately.
-
-## Bankruptcy & winning
-
-If your cash drops below **-$2,000**, you're declared bankrupt (out of
-active play, but you stay visible on the board and the final ranking).
-When the win condition is met, the game ends immediately and shows a full
-ranking by net worth, along with each player's cash, assets, liabilities,
-income, and holdings.
+At the end of the Age 70 round, every player's final cash, assets, debt,
+and passive income are tallied into a Net Worth ranking. Highest Net Worth
+wins.

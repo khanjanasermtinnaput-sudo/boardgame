@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      card_catalog: {
+        Row: {
+          base_value: number
+          category: string
+          description: string
+          id: string
+          name: string
+          passive_income: number
+          purchase_price: number
+        }
+        Insert: {
+          base_value: number
+          category: string
+          description: string
+          id: string
+          name: string
+          passive_income?: number
+          purchase_price: number
+        }
+        Update: {
+          base_value?: number
+          category?: string
+          description?: string
+          id?: string
+          name?: string
+          passive_income?: number
+          purchase_price?: number
+        }
+        Relationships: []
+      }
       chat_messages: {
         Row: {
           body: string
@@ -85,123 +115,74 @@ export type Database = {
           },
         ]
       }
-      game_actions: {
+      game_players: {
         Row: {
-          created_at: string
+          assets: Json
+          cash: number
+          debts: Json
+          deck: Json
+          deck_cursor: number
           game_id: string
-          id: string
-          payload: Json
-          processed: boolean
+          hand: Json
+          income_summary: Json
+          net_worth: number
+          passive_income: number
+          personal_event: Json
           profile_id: string
-          type: string
-        }
-        Insert: {
-          created_at?: string
-          game_id: string
-          id?: string
-          payload?: Json
-          processed?: boolean
-          profile_id: string
-          type: string
-        }
-        Update: {
-          created_at?: string
-          game_id?: string
-          id?: string
-          payload?: Json
-          processed?: boolean
-          profile_id?: string
-          type?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "game_actions_game_id_fkey"
-            columns: ["game_id"]
-            isOneToOne: false
-            referencedRelation: "games"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "game_actions_profile_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      game_log: {
-        Row: {
-          created_at: string
-          entry: Json
-          game_id: string
-          id: string
-          seq: number
-        }
-        Insert: {
-          created_at?: string
-          entry: Json
-          game_id: string
-          id?: string
-          seq: number
-        }
-        Update: {
-          created_at?: string
-          entry?: Json
-          game_id?: string
-          id?: string
-          seq?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "game_log_game_id_fkey"
-            columns: ["game_id"]
-            isOneToOne: false
-            referencedRelation: "games"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      games: {
-        Row: {
-          current_seat: number
-          final_results: Json
-          id: string
-          market: Json
-          room_id: string
-          round: number
-          state: Json
-          turn: number
+          ready: boolean
+          salary: number
+          seat: number
           updated_at: string
         }
         Insert: {
-          current_seat?: number
-          final_results?: Json
-          id?: string
-          market?: Json
-          room_id: string
-          round?: number
-          state: Json
-          turn?: number
+          assets?: Json
+          cash?: number
+          debts?: Json
+          deck?: Json
+          deck_cursor?: number
+          game_id: string
+          hand?: Json
+          income_summary?: Json
+          net_worth?: number
+          passive_income?: number
+          personal_event?: Json
+          profile_id: string
+          ready?: boolean
+          salary?: number
+          seat: number
           updated_at?: string
         }
         Update: {
-          current_seat?: number
-          final_results?: Json
-          id?: string
-          market?: Json
-          room_id?: string
-          round?: number
-          state?: Json
-          turn?: number
+          assets?: Json
+          cash?: number
+          debts?: Json
+          deck?: Json
+          deck_cursor?: number
+          game_id?: string
+          hand?: Json
+          income_summary?: Json
+          net_worth?: number
+          passive_income?: number
+          personal_event?: Json
+          profile_id?: string
+          ready?: boolean
+          salary?: number
+          seat?: number
           updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "games_room_id_fkey"
-            columns: ["room_id"]
-            isOneToOne: true
-            referencedRelation: "rooms"
+            foreignKeyName: "game_players_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_players_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -244,6 +225,101 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      games: {
+        Row: {
+          age: number
+          global_event: Json
+          id: string
+          market: Json
+          phase: number
+          room_id: string
+          round_no: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          age?: number
+          global_event?: Json
+          id?: string
+          market?: Json
+          phase?: number
+          room_id: string
+          round_no?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          age?: number
+          global_event?: Json
+          id?: string
+          market?: Json
+          phase?: number
+          room_id?: string
+          round_no?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "games_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: true
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      global_event_catalog: {
+        Row: {
+          description: string
+          effects: Json
+          id: string
+          name: string
+          type: string
+        }
+        Insert: {
+          description: string
+          effects?: Json
+          id: string
+          name: string
+          type: string
+        }
+        Update: {
+          description?: string
+          effects?: Json
+          id?: string
+          name?: string
+          type?: string
+        }
+        Relationships: []
+      }
+      personal_event_catalog: {
+        Row: {
+          amount: number | null
+          description: string
+          effect_kind: string
+          id: string
+          name: string
+          pct: number | null
+        }
+        Insert: {
+          amount?: number | null
+          description: string
+          effect_kind: string
+          id: string
+          name: string
+          pct?: number | null
+        }
+        Update: {
+          amount?: number | null
+          description?: string
+          effect_kind?: string
+          id?: string
+          name?: string
+          pct?: number | null
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -407,9 +483,45 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      finish_game: {
-        Args: { _final_results: Json; _final_state: Json; _processed_action_id?: string | null; _room_id: string }
+      game_borrow: {
+        Args: { _amount: number; _game_id: string }
         Returns: undefined
+      }
+      game_buy_card: {
+        Args: { _card_id: string; _game_id: string }
+        Returns: undefined
+      }
+      game_repay: {
+        Args: { _amount: number; _debt_id: string; _game_id: string }
+        Returns: undefined
+      }
+      game_sell_asset: {
+        Args: { _game_id: string; _instance_id: string }
+        Returns: undefined
+      }
+      game_set_ready: {
+        Args: { _game_id: string; _ready: boolean }
+        Returns: undefined
+      }
+      game_start: {
+        Args: { _room_id: string }
+        Returns: {
+          age: number
+          global_event: Json
+          id: string
+          market: Json
+          phase: number
+          room_id: string
+          round_no: number
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "games"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       join_room: {
         Args: { _as_spectator?: boolean; _code?: string; _room_id?: string }
@@ -437,42 +549,6 @@ export type Database = {
         Returns: undefined
       }
       leave_room: { Args: { _room_id: string }; Returns: undefined }
-      start_game: {
-        Args: { _initial_state: Json; _room_id: string }
-        Returns: {
-          current_seat: number
-          final_results: Json
-          id: string
-          market: Json
-          room_id: string
-          round: number
-          state: Json
-          turn: number
-          updated_at: string
-        }
-        SetofOptions: {
-          from: "*"
-          to: "games"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
-      submit_game_result: {
-        Args: { _room_id: string }
-        Returns: undefined
-      }
-      sync_game_state: {
-        Args: {
-          _current_seat: number
-          _market: Json
-          _processed_action_id?: string | null
-          _room_id: string
-          _round: number
-          _state: Json
-          _turn: number
-        }
-        Returns: undefined
-      }
       transfer_host: {
         Args: { _room_id: string; _target: string }
         Returns: undefined
